@@ -17,7 +17,7 @@ const surveys = require('./surveys');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 const ID_RE = /^[0-9a-f-]{8,64}$/i;
 
 const MIME = {

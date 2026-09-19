@@ -34,7 +34,7 @@
 
   function surveyCard(s) {
     const card = document.createElement('article');
-    card.className = 'fcard';
+    card.className = 'fcard scard';
 
     const tile = document.createElement('span');
     tile.className = 'ftile ppt';
@@ -51,21 +51,30 @@
     meta.textContent = `${s.questions.length} 道题 · ${s.responseCount} 人已答 · ${s.createdBy.name} · ${App.fmtTime(s.createdAt)}`;
     const editing = document.createElement('div');
     editing.className = 'fediting';
-    const badge = document.createElement('span');
-    badge.className = 'label';
-    badge.textContent = s.mine ? '我创建的' : '';
-    if (s.mine) editing.appendChild(badge);
+    if (s.mine) {
+      const badge = document.createElement('span');
+      badge.className = 'label';
+      badge.textContent = '我创建的';
+      editing.appendChild(badge);
+    }
     main.append(name, meta, editing);
     card.appendChild(main);
 
+    // 右侧操作区：填写按钮始终可见（各设备一致），创建者另有管理按钮
     const actions = document.createElement('div');
-    actions.className = 'factions';
-    actions.appendChild(iconBtn('填写', '✏️', () => openFill(s.id), ''));
+    actions.className = 'factions sv-actions';
     if (s.mine) {
       actions.appendChild(iconBtn('查看结果', '📊', () => openResult(s.id), ''));
-      actions.appendChild(iconBtn('导出 CSV', '⬇️', () => exportCsv(s), ''));
+      actions.appendChild(iconBtn('导出 CSV', '⬇️', () => exportCsv(s), 'sv-hide-m'));
       actions.appendChild(iconBtn('删除', '🗑️', () => doDelete(s), 'danger'));
     }
+    const fillBtn = document.createElement('button');
+    fillBtn.className = 'btn primary sv-fill-btn';
+    fillBtn.textContent = '填写';
+    fillBtn.title = '进入问卷填写';
+    fillBtn.setAttribute('aria-label', '填写问卷：' + s.title);
+    fillBtn.addEventListener('click', () => openFill(s.id));
+    actions.appendChild(fillBtn);
     card.appendChild(actions);
     return card;
   }

@@ -131,6 +131,7 @@ input { font: inherit; }
 .ftile.word { background: var(--word); } .ftile.excel { background: var(--excel); }
 .ftile.ppt { background: var(--ppt); } .ftile.pdf { background: var(--pdf); }
 .fmain { flex: 1; min-width: 0; cursor: pointer; }
+.fmain { min-width: 0; }
 .fname { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fmeta { color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
 .fmeta .sep { margin: 0 6px; opacity: .5; }
@@ -377,7 +378,8 @@ body.editor-page { display: flex; flex-direction: column; height: 100%; overflow
 
 /* ---- 手机 ---- */
 [data-device="mobile"] .files { grid-template-columns: 1fr; }
-[data-device="mobile"] .factions .icon-btn:not(.more-btn) { display: none; }
+/* 手机上文件卡片的操作收进"⋯"面板；问卷卡片（.scards）不受影响，右侧始终有"填写"按钮 */
+[data-device="mobile"] .files:not(.scards) .factions .icon-btn:not(.more-btn) { display: none; }
 [data-device="mobile"] .factions .more-btn { display: grid; font-size: 22px; color: var(--ink); }
 .more-btn { display: none; }
 [data-device="mobile"] .brand-text .sub { display: none; }
@@ -385,6 +387,13 @@ body.editor-page { display: flex; flex-direction: column; height: 100%; overflow
 [data-device="mobile"] .upload-progress { flex-basis: 100%; }
 [data-device="mobile"] .wrap { padding: 12px 12px 20px; }
 [data-device="mobile"] .fmain { padding-right: 2px; }
+
+/* 问卷卡片：右侧"填写"主按钮（各设备一致） */
+.sv-actions { align-items: center; flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
+.files.scards { display: flex; flex-direction: column; gap: 12px; }
+.scard .sv-actions { margin-left: auto; }
+.sv-fill-btn { font-weight: 600; padding: 8px 18px; white-space: nowrap; }
+[data-device="mobile"] .sv-hide-m { display: none !important; }
 
 /* ---- 平板 ---- */
 [data-device="tablet"] .files { grid-template-columns: repeat(2, 1fr); }
