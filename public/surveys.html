@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>问卷 · LAN Office</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234F46E5'/%3E%3Ctext x='16' y='22.5' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+    </div>
+    <div class="brand-text">
+      <h1>问卷</h1>
+      <span class="sub">创建 · 填写 · 统计</span>
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip" id="chip-online">👤 在线 1 人</span>
+    <a class="chip chip-link" href="/" title="返回文件列表">🗂 文件列表</a>
+    <button class="chip chip-user" id="chip-user" title="点击修改昵称与设备名称">…</button>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <section class="card-panel" id="creator" hidden>
+    <h2>新建问卷</h2>
+    <input type="text" id="sv-title" class="wide-input" placeholder="问卷标题（例如：课堂小测第一章）" maxlength="80">
+    <div id="q-list"></div>
+    <div class="row-gap">
+      <button class="btn" id="btn-add-q">＋ 添加问题</button>
+      <button class="btn primary" id="btn-create">发布问卷</button>
+      <button class="btn ghost" id="btn-cancel-create">收起</button>
+    </div>
+    <p class="tip">每人一票，可修改后重新提交；创建者可查看统计并导出 CSV。</p>
+  </section>
+
+  <section id="list-view">
+    <div class="toolbar">
+      <button class="btn primary" id="btn-new">＋ 新建问卷</button>
+      <span class="label-muted" id="sv-count"></span>
+    </div>
+    <section class="files" id="sv-list" aria-live="polite"></section>
+    <section class="empty" id="sv-empty" hidden>
+      <div class="empty-icon">📋</div>
+      <h2>还没有问卷</h2>
+      <p>点"新建问卷"，设置几道选择题；学生打开同一网址即可作答，答卷统计一目了然。</p>
+    </section>
+  </section>
+
+  <section id="fill-view" hidden></section>
+  <section id="result-view" hidden></section>
+</main>
+
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/surveys.js"></script>
+</body>
+</html>

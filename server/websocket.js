@@ -19,12 +19,13 @@ function attach(httpServer) {
       ? auth.userId
       : crypto.randomUUID();
     const name = collab.sanitizeName(auth.name) || collab.randomName();
+    const device = collab.sanitizeName(auth.device) || collab.randomDeviceName();
 
-    collab.registerSocket(sock.id, userId, name);
+    collab.registerSocket(sock.id, userId, name, device);
 
     sock.emit('init', {
       userId,
-      you: { id: userId, name, color: collab.colorFor(userId) },
+      you: { id: userId, name, device, color: collab.colorFor(userId) },
       snapshot: collab.snapshot()
     });
 
@@ -40,10 +41,12 @@ function attach(httpServer) {
       }
     });
 
-    sock.on('user:rename', (raw) => {
-      const name = collab.sanitizeName(raw) || collab.randomName();
-      collab.rename(userId, name);
-      sock.emit('you', { id: userId, name, color: collab.colorFor(userId) });
+    sock.on('user:profile', (raw) => {
+      const p = raw && typeof raw === 'object' ? raw : {};
+      if (p.name !== undefined) collab.rename(userId, collab.sanitizeName(p.name) || undefined);
+      if (p.device !== undefined) collab.setDevice(userId, collab.sanitizeName(p.device) || collab.randomDeviceName());
+      const u = collab.infoOf(userId);
+      sock.emit('you', u || { id: userId, name, device, color: collab.colorFor(userId) });
     });
 
     sock.on('disconnect', () => collab.unregisterSocket(sock.id));

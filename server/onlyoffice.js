@@ -141,6 +141,8 @@ function callbackBase() {
 function buildEditorConfig(meta, user, opts) {
   const info = fileManager.documentTypeInfo(meta.ext);
   const base = callbackBase();
+  // 修订模式仅对可编辑的文字文档生效：每人的修改按作者颜色+名字标注
+  const reviewMode = opts.mode === 'review' && info.editable && info.documentType === 'word';
   const cfg = {
     documentType: info.documentType,
     type: opts.type === 'mobile' ? 'mobile' : 'desktop',
@@ -160,7 +162,7 @@ function buildEditorConfig(meta, user, opts) {
       user: { id: user.id, name: user.name },
       callbackUrl: `${base}/api/onlyoffice/callback`,
       lang: opts.lang || 'zh-CN',
-      mode: info.editable ? 'edit' : 'view',
+      mode: reviewMode ? 'review' : (info.editable ? 'edit' : 'view'),
       customization: {
         autosave: true,
         forcesave: true,
@@ -170,6 +172,12 @@ function buildEditorConfig(meta, user, opts) {
       }
     }
   };
+  if (reviewMode) {
+    cfg.editorConfig.customization.review = {
+      trackChanges: true,
+      showReviewChanges: true
+    };
+  }
   if (state.jwtSecret) {
     cfg.token = jwt.sign(
       { document: cfg.document, editorConfig: cfg.editorConfig },

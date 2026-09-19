@@ -5,9 +5,24 @@
   const ADJ = ['Blue', 'Green', 'Red', 'Silver', 'Golden', 'Purple', 'Crimson', 'Aqua', 'Amber', 'Ivory'];
   const ANI = ['Fox', 'Cat', 'Panda', 'Wolf', 'Bear', 'Tiger', 'Koala', 'Deer', 'Falcon', 'Dolphin', 'Owl', 'Rabbit'];
   const USER_KEY = 'lanoffice.user.v1';
+  const DEVICE_KEY = 'lanoffice.device.v1';
 
   function randomName() {
     return ADJ[Math.floor(Math.random() * ADJ.length)] + ' ' + ANI[Math.floor(Math.random() * ANI.length)];
+  }
+
+  function guessDeviceKind() {
+    const ua = navigator.userAgent || '';
+    if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return '平板';
+    if (/Mobi|iPhone|Windows Phone/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return '手机';
+    return '电脑';
+  }
+
+  function randomDeviceName() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let tail = '';
+    for (let i = 0; i < 3; i++) tail += chars[Math.floor(Math.random() * chars.length)];
+    return guessDeviceKind() + '-' + tail;
   }
 
   function colorFor(id) {
@@ -40,6 +55,17 @@
 
   function saveUser() {
     try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (_) { /* 忽略 */ }
+  }
+
+  let device = null;
+  try { device = JSON.parse(localStorage.getItem(DEVICE_KEY) || 'null'); } catch (_) { /* 忽略 */ }
+  if (!device || typeof device.name !== 'string' || !device.name) {
+    device = { name: randomDeviceName() };
+    try { localStorage.setItem(DEVICE_KEY, JSON.stringify(device)); } catch (_) { /* 忽略 */ }
+  }
+
+  function saveDevice() {
+    try { localStorage.setItem(DEVICE_KEY, JSON.stringify(device)); } catch (_) { /* 忽略 */ }
   }
 
   function fmtSize(b) {
@@ -93,10 +119,10 @@
     return data;
   }
 
-  const socket = io({ auth: { userId: user.id, name: user.name } });
+  const socket = io({ auth: { userId: user.id, name: user.name, device: device.name } });
 
   window.App = {
-    PALETTE, user, saveUser, randomName, colorFor, fmtSize, fmtTime, typeMeta, api, socket,
+    PALETTE, user, device, saveUser, saveDevice, randomName, randomDeviceName, colorFor, fmtSize, fmtTime, typeMeta, api, socket,
     escapeHtml(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -151,7 +177,7 @@
     el.className = 'avatar';
     el.style.background = p.color || App.colorFor(p.id);
     el.textContent = (p.name || '?').trim().charAt(0).toUpperCase() || '?';
-    el.title = p.name || '';
+    el.title = p.device ? `${p.name}（${p.device}）` : (p.name || '');
     return el;
   }
   window.avatarEl = avatarEl;

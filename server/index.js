@@ -11,12 +11,13 @@ const { exec } = require('child_process');
 
 const config = require('./config');
 const fileManager = require('./fileManager');
+const surveys = require('./surveys');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 const { registerRoutes, setPort } = require('./routes');
 const { attach: attachWebsocket } = require('./websocket');
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
 function isPortFree(port) {
   return new Promise((resolve) => {
@@ -92,6 +93,7 @@ function banner(port, portChanged) {
 
 async function main() {
   fileManager.init();
+  surveys.init();
   const { port, changed } = await findFreePort(config.port);
   setPort(port);
   ds.setRuntimePort(port);

@@ -4,6 +4,8 @@
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const fileId = params.get('id') || '';
+  const reviewMode = params.get('mode') === 'review';
+  const REVIEWABLE = ['docx', 'doc', 'odt']; // 修订模式（Track Changes）仅对文字文档有意义
 
   let currentFile = null;
   let dirty = false;
@@ -85,6 +87,21 @@
     $('ed-name').textContent = meta.name;
     setStatus('', meta.size != null ? App.fmtSize(meta.size) + ' · 加载编辑器…' : '加载编辑器…');
 
+    // 修订模式开关：仅对可编辑文字文档显示（Track Changes，修改按作者颜色+名字标注）
+    const modeBtn = $('ed-mode');
+    if (REVIEWABLE.includes(meta.ext)) {
+      modeBtn.hidden = false;
+      modeBtn.textContent = reviewMode ? '🖊 修订模式：开' : '🖊 修订模式：关';
+      modeBtn.title = reviewMode
+        ? '当前为修订模式：每人的修改按颜色+名字标注，可切换回自由编辑'
+        : '开启修订模式：每人的修改按颜色+名字标注（谁写的哪一段一目了然）';
+      modeBtn.onclick = () => {
+        const next = new URLSearchParams(location.search);
+        if (reviewMode) next.delete('mode'); else next.set('mode', 'review');
+        location.search = next.toString();
+      };
+    }
+
     let r;
     try {
       r = await App.api(`/api/files/${encodeURIComponent(fileId)}/editor-config`, {
@@ -92,7 +109,8 @@
         body: JSON.stringify({
           userId: App.user.id,
           userName: App.user.name,
-          type: (window.matchMedia('(pointer: coarse)').matches || innerWidth < 640) ? 'mobile' : 'desktop'
+          type: (window.matchMedia('(pointer: coarse)').matches || innerWidth < 640) ? 'mobile' : 'desktop',
+          mode: reviewMode ? 'review' : 'edit'
         })
       });
     } catch (e) {

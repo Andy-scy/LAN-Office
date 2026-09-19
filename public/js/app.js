@@ -132,10 +132,11 @@
       ? 'OnlyOffice 编辑引擎已连接'
       : '未检测到 ONLYOFFICE Document Server —— 文件管理可用，在线编辑需先安装引擎（见 README）';
     $('chip-online').textContent = '👤 在线 ' + (info.online || 0) + ' 人';
+    updateOnlineChipTitle();
     const u = App.user;
     $('chip-user').textContent = '';
-    $('chip-user').appendChild(window.avatarEl({ id: u.id, name: u.name, color: App.colorFor(u.id) }));
-    $('chip-user').appendChild(document.createTextNode(' ' + u.name));
+    $('chip-user').appendChild(window.avatarEl({ id: u.id, name: u.name, device: App.device.name, color: App.colorFor(u.id) }));
+    $('chip-user').appendChild(document.createTextNode(' ' + u.name + ' · ' + App.device.name));
     const hint = $('foot-hint');
     if (state.ds.available) {
       hint.textContent = '数据保存在服务器 data/ 目录；编辑内容会自动保存并生成备份。';
@@ -351,18 +352,29 @@
     });
   }
 
-  /* ---------- 昵称 ---------- */
-  function editNickname() {
+  /* ---------- 昵称与设备名 ---------- */
+  function editProfile() {
     window.modal((box, close) => {
       const h = document.createElement('h3');
-      h.textContent = '我的昵称';
+      h.textContent = '我的昵称与设备名称';
+      const l1 = document.createElement('div');
+      l1.className = 'tip';
+      l1.textContent = '昵称';
       const input = document.createElement('input');
       input.type = 'text';
       input.value = App.user.name;
       input.maxLength = 24;
+      const l2 = document.createElement('div');
+      l2.className = 'tip';
+      l2.style.marginTop = '10px';
+      l2.textContent = '设备名称（用于区分你的手机/平板/电脑）';
+      const input2 = document.createElement('input');
+      input2.type = 'text';
+      input2.value = App.device.name;
+      input2.maxLength = 24;
       const tip = document.createElement('div');
       tip.className = 'tip';
-      tip.textContent = '昵称会显示给同局域网的其他协作者（保存在本机浏览器）。';
+      tip.textContent = '两者都会显示给同局域网的其他协作者（保存在本机浏览器）。';
       const row = document.createElement('div');
       row.className = 'row';
       const cancel = document.createElement('button');
@@ -374,16 +386,24 @@
       ok.textContent = '保存';
       ok.onclick = () => {
         App.user.name = input.value.trim() || App.user.name;
+        App.device.name = input2.value.trim() || App.device.name;
         App.saveUser();
-        App.socket.emit('user:rename', App.user.name);
+        App.saveDevice();
+        App.socket.emit('user:profile', { name: App.user.name, device: App.device.name });
         close();
         renderHeader();
       };
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
       row.append(cancel, ok);
-      box.append(h, input, tip, row);
+      box.append(h, l1, input, l2, input2, tip, row);
       setTimeout(() => { input.focus(); input.select(); }, 30);
     });
+  }
+
+  function updateOnlineChipTitle() {
+    const users = state.lastOnlineUsers || [];
+    $('chip-online').title = users.length
+      ? '在线设备：\n' + users.map((u) => `${u.name}（${u.device || '未知设备'}）`).join('\n')
+      : '';
   }
 
   /* ---------- 事件绑定 ---------- */
@@ -411,7 +431,7 @@
     state.filter = e.target.value.trim();
     render();
   });
-  $('chip-user').addEventListener('click', editNickname);
+  $('chip-user').addEventListener('click', editProfile);
 
   let dragDepth = 0;
   document.addEventListener('dragenter', (e) => {
@@ -434,6 +454,8 @@
   /* ---------- Socket presence ---------- */
   App.socket.on('presence:update', (snap) => {
     $('chip-online').textContent = '👤 在线 ' + (snap.online.count) + ' 人';
+    state.lastOnlineUsers = snap.online.users;
+    updateOnlineChipTitle();
     let dirty = false;
     for (const f of state.files) {
       const p = snap.files[f.id];

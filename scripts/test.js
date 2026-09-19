@@ -213,6 +213,65 @@ async function main() {
     const fsData = await fsr.json();
     ok('引擎离线时 forcesave 优雅返回', fsr.status === 200 && fsData.ok === false, JSON.stringify(fsData));
 
+    console.log('— 问卷功能 —');
+    const creatorId = crypto.randomUUID();
+    const studentId = crypto.randomUUID();
+    let cr = await jsonFetch(BASE + '/api/surveys', 'POST', {
+      title: '课堂小测：第一章',
+      questions: [
+        { text: 'LAN Office 用什么引擎编辑 Word？', options: ['ONLYOFFICE', '自己的 HTML 转换', 'Word 2010'] },
+        { text: '协同编辑需要公网吗？', options: ['需要', '不需要，局域网即可'] }
+      ],
+      userId: creatorId,
+      userName: '王老师'
+    });
+    const svData = await cr.json();
+    ok('创建问卷', cr.status === 200 && svData.survey && svData.survey.questions.length === 2, JSON.stringify(svData).slice(0, 200));
+    const svId = svData.survey.id;
+
+    cr = await jsonFetch(BASE + '/api/surveys', 'POST', { title: '坏问卷', questions: [{ text: 'x', options: ['只有一个'] }], userId: creatorId });
+    ok('非法问卷（选项不足）被拒绝', cr.status === 400);
+
+    let lr = await (await fetch(BASE + '/api/surveys')).json();
+    ok('问卷列表包含新问卷', lr.surveys.length === 1 && lr.surveys[0].responseCount === 0);
+
+    await jsonFetch(`${BASE}/api/surveys/${svId}/submit`, 'POST', { userId: studentId, name: '李同学', device: '手机-A1', answers: [1, 0] });
+    await jsonFetch(`${BASE}/api/surveys/${svId}/submit`, 'POST', { userId: creatorId, name: '王老师', device: '电脑-77', answers: [0, 1] });
+    await jsonFetch(`${BASE}/api/surveys/${svId}/submit`, 'POST', { userId: studentId, name: '李同学', device: '手机-A1', answers: [0, 1] }); // 修改重交
+
+    let gr = await (await fetch(`${BASE}/api/surveys/${svId}?userId=${creatorId}`)).json();
+    ok('创建者视角：mine 标记 + 答卷数', gr.survey.mine === true && gr.survey.responseCount === 2, JSON.stringify(gr).slice(0, 200));
+    ok('创建者视角：统计正确（修改重交只计最新）', JSON.stringify(gr.survey.tally) === '[[2,0,0],[0,2]]', JSON.stringify(gr.survey.tally));
+    ok('创建者视角：答卷明细含设备名', gr.survey.responses.some((r) => r.device === '手机-A1'));
+    gr = await (await fetch(`${BASE}/api/surveys/${svId}?userId=${studentId}`)).json();
+    ok('学生视角：看不到他人明细但有我的答卷', gr.survey.mine === false && !gr.survey.responses && gr.survey.myResponse && gr.survey.myResponse.answers[0] === 0, JSON.stringify(gr).slice(0, 200));
+
+    let ex = await fetch(`${BASE}/api/surveys/${svId}/export?userId=${creatorId}`);
+    const raw = new Uint8Array(await ex.arrayBuffer());
+    const hasBom = raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF;
+    const csvText = new TextDecoder().decode(hasBom ? raw.slice(3) : raw);
+    ok('创建者可导出 CSV（BOM + 标题 + 明细）', ex.status === 200 && hasBom && csvText.includes('课堂小测') && csvText.includes('李同学'), csvText.slice(0, 80));
+    ex = await fetch(`${BASE}/api/surveys/${svId}/export?userId=${studentId}`);
+    ok('学生导出被拒绝（403）', ex.status === 403);
+
+    let svDel = await fetch(`${BASE}/api/surveys/${svId}?userId=${studentId}`, { method: 'DELETE' });
+    ok('学生删除被拒绝（403）', svDel.status === 403);
+    svDel = await fetch(`${BASE}/api/surveys/${svId}?userId=${creatorId}`, { method: 'DELETE' });
+    ok('创建者删除成功', svDel.status === 200);
+    lr = await (await fetch(BASE + '/api/surveys')).json();
+    ok('删除后列表为空', lr.surveys.length === 0);
+
+    console.log('— presence 含设备名 —');
+    const pd1 = io(BASE, { auth: { userId: crypto.randomUUID(), name: 'Blue Fox', device: '平板-B2' } });
+    await new Promise((res) => pd1.on('connect', res));
+    pd1.emit('presence:join', created['xlsx'].id);
+    await wait(500);
+    r = await (await fetch(BASE + '/api/files')).json();
+    const fu = r.files.find((f) => f.id === created['xlsx'].id);
+    ok('编辑者信息包含设备名称', fu.editing.count === 1 && fu.editing.users[0].device === '平板-B2', JSON.stringify(fu.editing));
+    pd1.disconnect();
+    await wait(600);
+
     console.log('— 端口占用自增 + 手动放文件自动识别 —');
     const child2 = spawnServer(PORT, 'data-test-2');
     const base2 = `http://127.0.0.1:${PORT + 1}`;

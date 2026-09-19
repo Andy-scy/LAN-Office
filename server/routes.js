@@ -13,10 +13,11 @@ const jwt = require('jsonwebtoken');
 const config = require('./config');
 const fileManager = require('./fileManager');
 const collab = require('./collaboration');
+const surveys = require('./surveys');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const ID_RE = /^[0-9a-f-]{8,64}$/i;
 
 const MIME = {
@@ -243,7 +244,8 @@ function registerRoutes(app) {
       });
     }
     const user = editorUserFromBody(req.body);
-    const cfg = ds.buildEditorConfig(meta, user, { type: (req.body || {}).type, lang: 'zh-CN' });
+    const mode = (req.body || {}).mode === 'review' ? 'review' : 'edit';
+    const cfg = ds.buildEditorConfig(meta, user, { type: (req.body || {}).type, lang: 'zh-CN', mode });
     res.json({ config: cfg, ds: { url: ds.publicDsUrl(), available: true }, user });
   });
 
@@ -283,6 +285,67 @@ function registerRoutes(app) {
       console.error('[onlyoffice] 回调处理异常:', e);
       res.json({ error: 1 });
     }
+  });
+
+  /* ---------- 问卷 ---------- */
+  app.get('/api/surveys', (req, res) => {
+    res.json({ surveys: surveys.list(String(req.query.userId || '')) });
+  });
+
+  app.post('/api/surveys', (req, res) => {
+    const b = req.body || {};
+    try {
+      const survey = surveys.create({
+        title: b.title,
+        questions: b.questions,
+        user: { id: b.userId, name: b.userName }
+      });
+      res.json({ survey });
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/surveys/:id', (req, res) => {
+    const id = requireValidId(req, res); if (!id) return;
+    const view = surveys.get(id, String(req.query.userId || ''));
+    if (!view) return res.status(404).json({ error: '问卷不存在' });
+    res.json({ survey: view });
+  });
+
+  app.post('/api/surveys/:id/submit', (req, res) => {
+    const id = requireValidId(req, res); if (!id) return;
+    try {
+      res.json(surveys.submit(id, req.body || {}));
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/surveys/:id', (req, res) => {
+    const id = requireValidId(req, res); if (!id) return;
+    try {
+      const ok = surveys.remove(id, String(req.query.userId || ''));
+      if (!ok) return res.status(404).json({ error: '问卷不存在' });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/surveys/:id/export', (req, res) => {
+    const id = requireValidId(req, res); if (!id) return;
+    let csv;
+    try {
+      csv = surveys.csv(id, String(req.query.userId || ''));
+    } catch (e) {
+      return res.status(e.status || 400).json({ error: e.message });
+    }
+    if (!csv) return res.status(404).json({ error: '问卷不存在' });
+    const survey = surveys.get(id, String(req.query.userId || ''));
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', contentDisposition(`${survey ? survey.title : '问卷'}-答卷.csv`.replace(/[\\/:*?"<>|]/g, '_'), true));
+    res.send(csv);
   });
 
   /* ---------- 杂项 ---------- */

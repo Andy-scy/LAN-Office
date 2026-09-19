@@ -10,11 +10,20 @@ const PALETTE = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4
 
 const ADJECTIVES = ['Blue', 'Green', 'Red', 'Silver', 'Golden', 'Purple', 'Crimson', 'Aqua', 'Amber', 'Ivory'];
 const ANIMALS = ['Fox', 'Cat', 'Panda', 'Wolf', 'Bear', 'Tiger', 'Koala', 'Deer', 'Falcon', 'Dolphin', 'Owl', 'Rabbit'];
+const DEVICE_KINDS = ['电脑', '手机', '平板', '笔记本'];
 
 function randomName() {
   const a = ADJECTIVES[crypto.randomInt(ADJECTIVES.length)];
   const b = ANIMALS[crypto.randomInt(ANIMALS.length)];
   return `${a} ${b}`;
+}
+
+function randomDeviceName() {
+  const kind = DEVICE_KINDS[crypto.randomInt(DEVICE_KINDS.length)];
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let tail = '';
+  for (let i = 0; i < 3; i++) tail += chars[crypto.randomInt(chars.length)];
+  return `${kind}-${tail}`;
 }
 
 function colorFor(id) {
@@ -34,16 +43,16 @@ function sanitizeName(raw) {
 class Collaboration extends EventEmitter {
   constructor() {
     super();
-    this.rooms = new Map();     // fileId -> Map(userId -> {name,color,sockets:Set})
-    this.users = new Map();     // userId -> {name,color,sockets:Set}
+    this.rooms = new Map();     // fileId -> Map(userId -> {name,device,color,sockets:Set})
+    this.users = new Map();     // userId -> {name,device,color,sockets:Set}
     this.socketUser = new Map(); // socketId -> userId
   }
 
-  registerSocket(socketId, userId, name) {
+  registerSocket(socketId, userId, name, device) {
     this.socketUser.set(socketId, userId);
     let u = this.users.get(userId);
     if (!u) {
-      u = { name, color: colorFor(userId), sockets: new Set() };
+      u = { name, device, color: colorFor(userId), sockets: new Set() };
       this.users.set(userId, u);
     }
     u.sockets.add(socketId);
@@ -89,14 +98,21 @@ class Collaboration extends EventEmitter {
 
   rename(userId, name) {
     const u = this.users.get(userId);
-    if (!u) return;
+    if (!u || !name) return;
     u.name = name;
+    this.emit('change');
+  }
+
+  setDevice(userId, device) {
+    const u = this.users.get(userId);
+    if (!u || !device) return;
+    u.device = device;
     this.emit('change');
   }
 
   infoOf(userId) {
     const u = this.users.get(userId);
-    return u ? { id: userId, name: u.name, color: u.color } : null;
+    return u ? { id: userId, name: u.name, device: u.device, color: u.color } : null;
   }
 
   editingCount(fileId) {
@@ -107,13 +123,13 @@ class Collaboration extends EventEmitter {
   editingUsers(fileId) {
     const room = this.rooms.get(fileId);
     if (!room) return [];
-    return Array.from(room.entries()).map(([id, u]) => ({ id, name: u.name, color: u.color }));
+    return Array.from(room.entries()).map(([id, u]) => ({ id, name: u.name, device: u.device, color: u.color }));
   }
 
   onlineCount() { return this.users.size; }
 
   onlineUsers() {
-    return Array.from(this.users.entries()).map(([id, u]) => ({ id, name: u.name, color: u.color }));
+    return Array.from(this.users.entries()).map(([id, u]) => ({ id, name: u.name, device: u.device, color: u.color }));
   }
 
   snapshot() {
@@ -121,7 +137,7 @@ class Collaboration extends EventEmitter {
     for (const [fid, room] of this.rooms) {
       files[fid] = {
         count: room.size,
-        users: Array.from(room.entries()).map(([id, u]) => ({ id, name: u.name, color: u.color }))
+        users: Array.from(room.entries()).map(([id, u]) => ({ id, name: u.name, device: u.device, color: u.color }))
       };
     }
     return { files, online: { count: this.users.size, users: this.onlineUsers() } };
@@ -130,6 +146,7 @@ class Collaboration extends EventEmitter {
 
 module.exports = new Collaboration();
 module.exports.randomName = randomName;
+module.exports.randomDeviceName = randomDeviceName;
 module.exports.colorFor = colorFor;
 module.exports.sanitizeName = sanitizeName;
 module.exports.PALETTE = PALETTE;
