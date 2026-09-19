@@ -1,212 +1,146 @@
-# LAN Office · 局域网多人协同 Office 编辑器
+<div align="center">
 
-在**家庭 / 学校 / 小型办公室的局域网**里，用一台 Windows 电脑做服务器，大家用手机、平板、电脑的浏览器同时编辑同一份 Word / Excel / PowerPoint 文档，实时看到彼此的修改，自动保存、自动备份。
+# 🏠 LAN Office
 
-```
-双击 start.bat  →  服务器启动  →  显示 http://192.168.x.x:3000
-                                      ↓
-              局域网内所有设备用浏览器打开该地址
-                                      ↓
-              上传 / 新建 Office 文档 → 打开 → 多人同时编辑 → 实时同步 → 自动保存
-```
+**局域网里的多人协同 Office 编辑器 —— 电脑双击即用，同一 WiFi 下的手机、平板、电脑一起写文档**
+
+真实编辑 `.docx` `.xlsx` `.pptx` · 实时多人协同 · 修订署名 · 课堂问卷 · 自动备份 · 无需公网 · 免费开源
+
+[![Version](https://img.shields.io/badge/version-1.2.1-4F46E5?logo=github)](https://github.com/Andy-scy/LAN-Office/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node%20%E2%89%A5%2018-339933?logo=node.js)](https://nodejs.org)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D4?logo=windows)](#安装)
+[![Engine](https://img.shields.io/badge/%E5%BC%95%E6%93%8E-ONLYOFFICE%20Docs-E32012)](https://github.com/ONLYOFFICE/DocumentServer)
+
+[快速开始](#-快速开始) · [界面预览](#-界面预览) · [功能总览](#-功能总览) · [常见问题](#-常见问题) · [开源调研](docs/research.md)
+
+<img src="docs/images/home-desktop.png" width="860" alt="LAN Office 文件列表（电脑版）"/>
+
+*电脑版文件列表 —— 每个文件卡片都能看到类型、大小、修改时间，以及"谁正在编辑"*
+
+</div>
 
 ---
 
-## 功能
+## ✨ 它能做什么
 
-- **文件管理**：上传（支持拖拽、多选）、下载、重命名、删除、新建空白 Word/Excel/PPT，显示大小、修改时间、实时编辑人数
-- **真实 Office 编辑**：基于 ONLYOFFICE 引擎，在浏览器里直接编辑 `.docx` `.xlsx` `.pptx`（保留格式，不是转 HTML 的假编辑器），另支持 `.doc` `.xls` `.ppt` `.odt` `.ods` `.odp` `.csv` `.txt` 编辑与 `.pdf` 查看
-- **多人实时协同**：多人打开同一文件自动进入同一编辑会话，实时看到彼此的光标和内容修改（引擎内置协同机制）
-- **修订模式（谁写的哪部分一目了然）**：Word 文档可一键切换修订模式——每个人的修改按作者颜色标注并署名，老师可逐条"同意/否决"；光标本身就带颜色和昵称（Excel/PPT 无修订机制，仅彩色光标）
-- **简单问卷**：创建者设置单选题发布问卷；学生打开同一网址即可作答（可修改重交）；创建者实时查看各选项票数柱状图、作答明细（昵称+设备），一键导出 CSV（Excel 可打开）
-- **设备名称**：每台设备可自定义名称（默认自动生成如"电脑-6CU"），在线列表、编辑人数、答卷明细里都能区分是谁的哪台设备
-- **三套自适应 UI**：根据浏览器 UA 自动识别设备类型——**电脑**（鼠标交互、悬停效果、多列网格）、**手机**（单列大按钮、悬浮上传球、底部导航、文件操作收进底部面板）、**平板**（双列网格 + 触屏大按钮），编辑器本身也随之切换为触屏/桌面版；可用网址参数 `?ui=mobile|tablet|desktop` 强制指定
-- **在线状态**：随机昵称（如 Blue Fox / Silver Wolf）+ 专属颜色，可自行修改；文件列表实时显示"谁正在编辑什么"
-- **自动保存**：编辑停顿数秒后自动落盘；最后一人关闭文档时引擎自动回存
-- **自动备份**：每次保存前自动把上一版备份到 `data/backups/`，可在界面上查看历史并一键恢复
-- **断线友好**：刷新/断网后重新进入同一文件即可回到编辑会话；服务器重启不丢文件
-- **简单启动**：双击 `start.bat` 自动检查环境、找可用端口（3000 起自动 +1）、显示局域网地址、打开浏览器
+| | 功能 | 一句话说明 |
+|---|---|---|
+| 📝 | **真实 Office 编辑** | 浏览器里直接编辑 Word / Excel / PowerPoint，格式保真，不是转 HTML 的假编辑器 |
+| 👥 | **多人实时协同** | 同一 WiFi 下大家打开同一文件即进入同一会话，改动能实时看见 |
+| 🖊 | **修订模式** | 谁写的哪一段按**作者颜色 + 名字**标注，老师可逐条"同意/否决" |
+| 📋 | **课堂问卷** | 几分钟出一套选择题，学生扫码即答，柱状统计 + 明细 + 导出 CSV |
+| 💾 | **自动保存 + 备份** | 停手几秒自动落盘；每次保存前自动留档，改错了随时回退 |
+| 📱 | **三套自适应 UI** | 电脑 / 平板 / 手机自动识别，各自定制交互（触屏大按钮、底部导航、悬浮上传球） |
+| 🏷 | **设备名称** | 每台设备可命名（电脑-6CU、手机-A1），在线列表与答卷明细里分得清清楚楚 |
+| 🔌 | **局域网即用** | 无需公网、无需账号，数据全部留在自己电脑上 |
 
-## 技术架构
+<div align="center">
 
-```
-┌────────────────────────── 一台 Windows 电脑（服务器） ──────────────────────────┐
-│                                                                                │
-│  Node.js 服务（本项目，0.0.0.0 监听，默认 3000 端口）                            │
-│  ├─ 文件管理 API（上传/下载/改名/删除/新建，UUID 索引，免疫路径穿越）             │
-│  ├─ Socket.IO 在线状态（谁在线 / 谁在编辑哪个文件 / 昵称颜色）                    │
-│  ├─ OnlyOffice 集成（编辑器配置、JWT 签名、保存回调、forcesave）                 │
-│  └─ 保存管线：回调下载 → 校验 → 备份上一版 → 原子替换 → 版本 key 轮换            │
-│                                                                                │
-│  ONLYOFFICE Document Server（独立服务，默认 80 端口）                            │
-│  └─ 真实 Office 编辑器 + 内置多人实时协同引擎（同 key 自动合并会话）              │
-│                                                                                │
-│  data/                                                                         │
-│  ├─ documents/   所有文档（上传/新建/自动保存都落在这里）                        │
-│  ├─ backups/     每次保存前的自动备份（按文件分组、带时间戳、自动限量）           │
-│  └─ temp/        上传与保存的临时文件                                           │
-└────────────────────────────────────────────────────────────────────────────────┘
-        ↑ HTTP                          ↑ HTTP
-   手机 / 平板 / 电脑浏览器（同一局域网，无需安装任何客户端）
-```
+<img src="docs/images/editor-review.png" width="860" alt="修订模式：每人的修改按颜色与名字标注"/>
 
-分工原则：**文档内容的实时协同由 OnlyOffice 引擎负责（成熟机制，不自研 OT/CRDT）**；本项目负责文件管理、在线状态、保存与备份、局域网引导。
+*修订模式 —— 红色下划线的"123048"是协作者刚插入的内容，按作者署名标色，可逐条"同意/否决"*
 
-## 开源项目调研
+</div>
 
-完整调研报告见 [docs/research.md](docs/research.md)。核心结论：
+## 📸 界面预览
 
-| 候选 | 结论 |
-|---|---|
-| **ONLYOFFICE Document Server**（AGPL-3.0，6.9k★） | ✅ 唯一同时满足：三件套真实编辑 + 内置实时协同 + 有 Windows 原生安装包 + 免费不限人数 → **选用为核心引擎** |
-| Collabora Online（MPL-2.0，3.3k★） | ❌ Windows 无原生版，必须 Docker/WSL2，门槛过高 |
-| CryptPad（AGPL-3.0，7.9k★） | ❌ 加密网盘形态，文件被转内部格式，与"局域网共享文件直接编辑"定位不符 |
-| Univer（Apache-2.0，14.4k★） | ❌ 表格强但 docx/pptx 编辑与开源协同不完整，无法覆盖三件套 |
-| Etherpad（Apache-2.0，18.6k★） | ❌ 无真实 Office 文件编辑（其在线状态/断线重连交互设计值得借鉴，已借鉴） |
-| Yjs / ShareDB | ❌ 是自研协同编辑用的库；引擎已内置协同，按"不为用而用"原则不引入 |
-| filebrowser（Apache-2.0，35.9k★，已归档） | 参考其文件管理交互；文件层保持自研轻量实现 |
+**手机版**（触屏大按钮 · 悬浮上传球 · 底部导航）　　**课堂问卷统计**（实时柱状图 · 明细 · 导出 CSV）
 
-**本项目自身代码为原创（MIT）**，通过 HTTP/JS API 集成 OnlyOffice；集成实现参考了官方 [document-server-integration](https://github.com/ONLYOFFICE/document-server-integration)（Apache-2.0）的回调保存、forcesave 命令与版本 key 管理模式，并做了安全强化（UUID 索引取代文件名路径、中文文件名修复、保存校验）。
+| <img src="docs/images/home-mobile.png" width="300" alt="手机版"/> | <img src="docs/images/survey-results.png" width="480" alt="问卷统计"/> |
+|:---:|:---:|
 
-## 安装
+## 🚀 快速开始
 
-**方式一（推荐）：双击 `setup.bat` 自动安装**
+### 第一次使用（一次性准备）
 
-它会自动完成三件事：① 检测/自动下载绿色版 Node.js（无需管理员权限，含 SHA256 校验）；② 安装项目依赖；③ 检测 ONLYOFFICE 编辑引擎，未安装时自动下载官方安装器并拉起，安装过程中你只需在安装界面点几次"下一步"，向导每 15 秒自动检测安装进度。装完即可直接启动。
+1. 双击 **`setup.bat`** —— 自动安装绿色版 Node.js（含 SHA256 校验）、项目依赖，并引导安装 ONLYOFFICE Docs 社区版（编辑引擎，约 1GB 官方安装器）
+2. 安装 OnlyOffice 时在弹出的安装界面里：同意协议 → Install → UAC 点"是" → Finish
+3. 完成！新手请看 [使用说明.txt](使用说明.txt)，每一步都有保姆级说明
 
-小白用户请直接看项目根目录的 **《使用说明.txt》**，每一步都有截图级别的说明。
+### 以后每天
 
-**方式二：手动安装**（都在服务器那台电脑上）：
-
-1. **安装 Node.js 18 或更高版本**：<https://nodejs.org/zh-cn>（一路下一步即可）
-2. **安装 ONLYOFFICE Docs 社区版（Windows）**：<https://www.onlyoffice.com/download-docs.aspx>
-   - 选择 "Community Edition" 的 Windows 版本，下载后双击安装（安装器约 1GB，安装后约占 2-3GB 磁盘，建议 4GB 内存）
-   - 默认使用 **80 端口**；如安装器允许自定义端口，请记住它
-   - 安装完成后服务会自动启动（可在"服务"里看到 ONLYOFFICE 相关服务）
-3. 把本项目文件夹放到电脑上任意位置
-
-> OnlyOffice 只需要装一次。它不在本项目分发包内，其 AGPL-3.0 协议与版权归属 ONLYOFFICE，见"开源协议"。
-
-## 启动
-
-1. 双击 **`start.bat`**
-2. 首次运行会自动安装依赖（约 1-2 分钟），然后显示：
-```
-============================================================
-  LAN Office · 局域网多人协同办公  v1.0.0
-============================================================
-  本机访问:    http://localhost:3000
-  局域网访问:  http://192.168.3.97:3000   ← 其他设备（手机/平板/电脑）用这个
-  ...
-```
-
-3. 服务器本机会自动打开浏览器；其他设备在浏览器输入**局域网地址**即可
-
-### 手机 / 平板访问
-
-手机连接**同一个 Wi-Fi（同一局域网）**→ 打开任意浏览器 → 输入启动时显示的局域网地址（如 `http://192.168.3.97:3000`）→ 上传或打开文件即可编辑。页面自适应手机屏幕。
-
-### 多人协同方法
-
-1. 设备 A 打开某个文件（如 `项目计划.docx`）
-2. 设备 B 打开**同一个文件**
-3. 两人自动进入同一协同会话：A 修改标题，B 实时看到；B 改内容，A 也实时看到
-4. 编辑器顶部会显示参与者的名字和颜色光标；文件列表页显示"N 人正在编辑"
-5. 谁最后离开，修改就自动保存到服务器；中途也会定时自动保存
-
-### 修订模式（谁写的哪部分）
-
-Word 文档打开后，点顶栏的 **"🖊 修订模式：关"** 切换为**修订模式：开**：
-
-- 每个人插入/删除的文字都按**作者专属颜色**显示，悬停可见作者名
-- 老师可在"审查更改"面板里逐条**同意/否决**每处修改
-- 适合课堂/多人合稿场景；再点一次按钮切回自由编辑
-- Excel 与 PPT 不支持修订机制（这是格式限制），它们仍保留彩色光标区分
-
-### 问卷（课堂小测/收集意见）
-
-1. 首页点右上角 **"📋 问卷"** 进入问卷页
-2. 点"新建问卷"→ 写标题、加题目和选项（1-20 题，每题 2-6 选项）→ 发布
-3. 学生打开同一网址 → 问卷页点"填写"→ 单选作答 → 提交（可修改重交）
-4. 创建者点"查看结果"：实时柱状统计 + 作答明细（昵称、设备、时间），5 秒自动刷新
-5. 点"导出 CSV"可下载答卷明细，Excel/WPS 直接打开
-
-### 设备名称
-
-点右上角自己的头像 → 可同时修改**昵称**和**设备名称**。设备名默认按设备类型自动生成（电脑-XX / 手机-XX / 平板-XX），在在线列表（悬停可见）、文件编辑人数、问卷答卷明细里都会显示，用于区分"谁的哪台设备"。
-
-## 文件保存与自动备份
-
-- 所有文件都在项目的 **`data/`** 目录：
-  - `data/documents/` —— 正式文件（可直接把文件丢进这个文件夹，服务会自动识别）
-  - `data/backups/<文件ID>/` —— 每次保存前的自动备份，命名如 `项目计划_2026-09-19_12-30-01-239.docx`，默认每个文件保留 30 份（可在 `config/config.json` 调整），界面"备份历史"里可一键恢复
-  - `data/temp/` —— 上传/保存的临时文件
-- 保存流程：OnlyOffice 保存回调 → 下载到 temp → 校验（非空 + OOXML 包结构）→ 备份上一版 → 原子替换正式文件。避免文件损坏
-
-## Windows 防火墙与端口
-
-- 首次启动若弹出"Windows 安全中心警报"，请**勾选"专用网络"并点击"允许访问"**（这是 Node.js 需要的局域网监听权限）
-- 若其他设备仍无法访问，以管理员身份运行一次（端口按实际改）：
+1. 服务器电脑双击 **`start.bat`**，黑窗口会显示：
 
 ```
-netsh advfirewall firewall add rule name="LAN Office" dir=in action=allow protocol=TCP localport=3000
+本机访问:    http://localhost:3000
+局域网访问:  http://192.168.3.97:3000   ← 其他设备用这个
 ```
 
-- 安装 OnlyOffice 后，局域网设备还要能访问它的端口（默认 80）；一般安装时已自动放行，若没有请按上面同样方式放行该端口
-- 服务端口默认 3000，被占用会自动尝试 3001、3002…（配置见 `config/config.json`）
+2. 同一 WiFi 下的设备用浏览器打开"局域网访问"地址 → 上传或新建文档 → 开写！
 
-## 常见问题（FAQ）
+> 💡 首次启动若弹出 Windows 防火墙提示，勾选"专用网络"并点"允许访问"。
 
-**Q：setup.bat 下载 OnlyOffice 安装器失败或很慢？**
-A：安装器约 1GB，走 GitHub 官方发布渠道，国内网速波动属正常。向导已内置**断点续传**（中断后重新运行 setup.bat 会接着下，不会从头开始）和 TLS 兼容性修复（跳过证书吊销检查，解决 `CRYPT_E_REVOCATION_OFFLINE` 报错）。下载完成的文件放在 `downloads\onlyoffice-documentserver.exe`，下次运行向导会自动识别并跳过下载。也可手动从 <https://github.com/ONLYOFFICE/DocumentServer/releases/latest> 下载 `onlyoffice-documentserver.exe` 后放到 `downloads\` 目录。
+## 🧭 使用文档
 
-**Q：能打开文件，但显示"编辑引擎未连接"？**
-A：服务器上未安装或未启动 ONLYOFFICE Docs。按"安装"一节装好，回到页面点"重试"。文件管理功能不受影响。
+**推荐阅读：[使用说明.txt](使用说明.txt)** —— 面向小白的手把手手册，每个功能都写了"怎么用"和"怎么用好"：
 
-**Q：编辑器报 Token/JWT 错误？**
-A：OnlyOffice 7.2+ 默认启用 JWT。LAN Office 会自动读取 `C:\Program Files\ONLYOFFICE\DocumentServer\config\local.json` 里的密钥；若自动读取失败（如权限不足），把其中 `services.CoAuthoring.secret.inbox.string` 的值复制到 `config/config.json` 的 `ds.jwtSecret` 字段，然后重启 start.bat。
+- 文件管理：上传的 3 种方式、下载、重命名、删除与后悔药、备份历史恢复
+- 多人协同：怎么进入同一会话、自动保存的时机、修订模式怎么开
+- 问卷：出卷 → 答题 → 看统计 → 导出 CSV 全流程
+- 手机 / 平板三套界面的操作差异、设备名称的用法
 
-**Q：OnlyOffice 装在别的电脑/端口上？**
-A：在 `config/config.json` 设置 `ds.url`（如 `http://192.168.3.97:8080`）；若跨机器部署，还需把 `ds.callbackHost` 设为本机局域网 IP，并确保对方能访问本机 3000 端口。
+## 🔍 开源项目调研
 
-**Q：编辑器打不开/一直转圈（引擎已安装）？**
-A：多半是防火墙挡住了 OnlyOffice 的端口（默认 80），或 `ds.publicUrl` 未正确指向局域网可达地址。按上文放行端口即可。
+完整调研报告见 [docs/research.md](docs/research.md)。核心结论：**ONLYOFFICE Document Server（AGPL-3.0）** 是唯一同时满足"三件套真实编辑 + 内置实时协同 + Windows 原生安装 + 免费不限人数"的开源引擎，故采用「复用 OnlyOffice 引擎 + 自研轻量 Node.js 服务层」架构：
 
-**Q：端口被占用了？**
-A：不用管，会自动换下一个端口，以启动横幅显示的地址为准。
+- ✅ **复用**：文档编辑、格式解析、实时协同合并（引擎内置 OT 机制）
+- ✅ **自研**：文件管理（UUID 索引防路径穿越）、在线状态、自动保存管线（下载 → 校验 → 备份 → 原子替换）、局域网引导（网卡探测 / 端口自增 / 防火墙提示 / JWT 密钥自动读取）
+- ❌ **明确不做**：假 HTML 转换编辑器、自研 OT/CRDT 重复造轮子
 
-**Q：上传/文件名有乱码？**
-A：本服务已做 UTF-8 文件名修复与清洗；若通过其他工具上传出现乱码，可在页面上重命名。
+集成方式参考官方 [document-server-integration](https://github.com/ONLYOFFICE/document-server-integration)（Apache-2.0）并做了安全强化。
 
-**Q：两个人改了同一处怎么办？**
-A：同一会话内由 OnlyOffice 引擎合并（各自的光标互不覆盖）；极少数跨保存版本的并发编辑采用后保存者优先，关键内容可从"备份历史"找回。
+## ❓ 常见问题
 
-## 已知限制
+**Q：能打开文件列表，但显示"编辑引擎未连接"？**
+服务器上未安装或未启动 ONLYOFFICE Docs。重跑 `setup.bat`，或按"快速开始"手动安装。
 
-- 在线编辑必须安装 ONLYOFFICE Docs（社区版界面带 OnlyOffice 品牌；免费、不限人数）
-- 引擎较重：建议服务器预留 4GB 内存
-- `.pdf` 仅支持查看，不支持编辑
-- 无账号系统（局域网信任环境设计）；知道局域网地址的人都能访问
-- 编辑会话进行中若 Document Server 崩溃，该会话未保存的修改会丢失（已保存部分不受影响）
-- 极端并发（保存瞬间又有人加入新版本会话）在极少情况下会拆分为两个会话，后保存者覆盖；这是官方集成模式的已知边界
+**Q：编辑器报 Token / JWT 错误？**
+OnlyOffice 7.2+ 默认启用 JWT。LAN Office 会自动读取 `C:\Program Files\ONLYOFFICE\DocumentServer\config\local.json` 的密钥；若读取失败，把其中 `services.CoAuthoring.secret.inbox.string` 的值填入 `config/config.json` 的 `ds.jwtSecret` 后重启。
 
-## 开源协议
+**Q：其他设备打不开网址？**
+确认连的是同一个 WiFi；首次运行在防火墙提示里点"允许"；或管理员运行
+`netsh advfirewall firewall add rule name="LAN Office" dir=in action=allow protocol=TCP localport=3000`。
+
+**Q：网址端口不是 3000？**
+被占用会自动换 3001、3002……以启动横幅显示的为准。
+
+**Q：setup.bat 下载 OnlyOffice 失败或很慢？**
+安装器约 1GB 走 GitHub 发布渠道，向导已内置断点续传与 TLS 兼容修复（`--ssl-no-revoke`，解决 `CRYPT_E_REVOCATION_OFFLINE`），重跑会接着下。也可手动从 [Releases](https://github.com/ONLYOFFICE/DocumentServer/releases/latest) 下载 `onlyoffice-documentserver.exe` 放进项目根目录，向导会直接使用。
+
+**Q：80 端口被别的程序占用（如 Steam++ 加速器）？**
+OnlyOffice 默认用 80 端口。安装前先退出占用程序；安装后可修改其 nginx 配置换端口，并在 `config/config.json` 的 `ds.url` 里指定。
+
+**Q：文件存在哪？想整体备份？**
+都在项目目录的 `data\` 里。整体备份 = 复制整个 `data\` 文件夹。
+
+## ⚠️ 已知限制
+
+- 在线编辑必须安装 ONLYOFFICE Docs 社区版（界面带 OnlyOffice 品牌；免费、不限人数，建议服务器 4GB 内存）
+- `.pdf` 仅支持查看；Excel 与 PPT 无修订归属机制（格式限制），仍保留彩色光标
+- 无账号系统（面向局域网信任环境）；Document Server 崩溃时未保存的会话内容会丢失
+- 极端并发下保存瞬间加入的编辑者可能拆分为两个会话（官方集成模式的已知边界，后保存者覆盖）
+
+## 📄 开源协议
 
 - 本项目自身代码以 **MIT** 协议发布（见 [LICENSE](LICENSE)）
-- **ONLYOFFICE Document Server** 由 ONLYOFFICE 开发，采用 **AGPL-3.0** 协议，本项目不分发其代码，用户自行安装；通过进程间 HTTP API 集成。为遵守 AGPL 精神，集成配置方法与来源已在本文档注明
-- 集成实现参考 [ONLYOFFICE/document-server-integration](https://github.com/ONLYOFFICE/document-server-integration)（Apache-2.0）
-- npm 依赖及其许可证清单见 [LICENSES-THIRD-PARTY.md](LICENSES-THIRD-PARTY.md)
+- [ONLYOFFICE Document Server](https://github.com/ONLYOFFICE/DocumentServer) 由 ONLYOFFICE 开发，**AGPL-3.0**，不随本项目分发、由用户独立安装，经进程间 HTTP API 集成
+- npm 依赖清单见 [LICENSES-THIRD-PARTY.md](LICENSES-THIRD-PARTY.md)
 
-## 后续开发计划
+## 🗺 后续计划
 
-- [ ] 可选的简单访问口令（房间密码）
+- [ ] 可选访问口令（房间密码）
 - [ ] 文件回收站（删除可撤销）
-- [ ] 文档版本对比视图
-- [ ] 协同聊天 / 评论通知
-- [ ] 支持 HTTPS 局域网访问
-- [ ] 打包为免安装 Node 环境的绿色版（内嵌便携运行时）
-- [ ] Collabora 引擎可切换支持
+- [ ] 问卷支持多选题与匿名模式
+- [ ] HTTPS 局域网访问
+- [ ] 打包免装 Node 的绿色发行版
 
 ---
 
-*项目名：LAN Office · 让局域网里的每一台设备都能一起写文档。*
+<div align="center">
+
+**LAN Office** · 把局域网变成一间可以共同书写的教室 🏫
+
+<sub>如果对你有帮助，欢迎点个 Star ⭐</sub>
+
+</div>
