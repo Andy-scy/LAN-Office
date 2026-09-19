@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>编辑 · LAN Office</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234F46E5'/%3E%3Ctext x='16' y='22.5' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="editor-page">
+<header class="edbar">
+  <a class="btn ghost" href="/">← 返回</a>
+  <div class="ed-title">
+    <span class="ftile" id="ed-icon">?</span>
+    <span id="ed-name" title="">加载中…</span>
+  </div>
+  <div class="ed-status" id="ed-save">…</div>
+  <div class="avatars" id="ed-people" title="正在编辑"></div>
+</header>
+<div class="banner" id="ed-banner" hidden></div>
+<main class="ed-main">
+  <div id="editor-container"></div>
+  <div class="ed-overlay" id="ed-overlay" hidden>
+    <div class="ed-overlay-card">
+      <h2 id="ed-overlay-title">…</h2>
+      <div id="ed-overlay-body"></div>
+      <div class="ed-overlay-actions">
+        <button class="btn primary" id="ed-overlay-refresh">重试</button>
+        <a class="btn ghost" href="/">返回文件列表</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/editor.js"></script>
+</body>
+</html>

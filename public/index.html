@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAN Office · 局域网多人协同办公</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234F46E5'/%3E%3Ctext x='16' y='22.5' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+    </div>
+    <div class="brand-text">
+      <h1>LAN Office</h1>
+      <span class="sub">局域网多人协同办公</span>
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip" id="chip-server" title="局域网访问地址">…</span>
+    <span class="chip chip-ds" id="chip-ds"><i class="dot"></i>编辑引擎</span>
+    <span class="chip" id="chip-online">👤 在线 1 人</span>
+    <span class="chip" id="chip-files">🗂 0 个文件</span>
+    <button class="chip chip-user" id="chip-user" title="点击修改昵称">…</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="toolbar">
+    <button id="btn-upload" class="btn primary">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+      上传文件
+    </button>
+    <input type="file" id="file-input" multiple hidden
+      accept=".docx,.doc,.xlsx,.xls,.pptx,.ppt,.odt,.ods,.odp,.csv,.txt,.pdf">
+    <div class="btn-group">
+      <button id="btn-new" class="btn">＋ 新建</button>
+      <div class="menu" id="menu-new" hidden>
+        <button data-ext="docx"><span class="mi word">W</span>Word 文档 (.docx)</button>
+        <button data-ext="xlsx"><span class="mi excel">X</span>Excel 表格 (.xlsx)</button>
+        <button data-ext="pptx"><span class="mi ppt">P</span>PowerPoint 演示 (.pptx)</button>
+      </div>
+    </div>
+    <input id="search" type="search" placeholder="搜索文件名…" autocomplete="off">
+    <div class="upload-progress" id="upload-progress" hidden>
+      <div class="bar"><i></i></div><span>0%</span>
+    </div>
+  </section>
+
+  <section class="files" id="files" aria-live="polite"></section>
+
+  <section class="empty" id="empty" hidden>
+    <div class="empty-icon">📂</div>
+    <h2>还没有文件</h2>
+    <p>上传 Word / Excel / PowerPoint 文件，或直接新建一个空白文档。<br>同一局域网的设备打开同一文件即可多人协同编辑。</p>
+  </section>
+
+  <p class="foot-hint" id="foot-hint"></p>
+</main>
+
+<div class="drop-overlay" id="drop-overlay" hidden>
+  <div class="drop-box">📥 松开鼠标，上传文件</div>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
