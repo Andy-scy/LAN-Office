@@ -121,8 +121,19 @@
 
   const socket = io({ auth: { userId: user.id, name: user.name, device: device.name } });
 
+  /* 设备类型：与 <head> 内联脚本同源逻辑（优先读 data-device，兜底自行嗅探） */
+  function detectDeviceKind() {
+    const d = document.documentElement.dataset.device;
+    if (d === 'mobile' || d === 'tablet' || d === 'desktop') return d;
+    const ua = navigator.userAgent || '';
+    if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua)) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua))) return 'tablet';
+    if (/Mobi|iPhone|Windows Phone/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return 'mobile';
+    return 'desktop';
+  }
+  const deviceKind = detectDeviceKind();
+
   window.App = {
-    PALETTE, user, device, saveUser, saveDevice, randomName, randomDeviceName, colorFor, fmtSize, fmtTime, typeMeta, api, socket,
+    PALETTE, user, device, deviceKind, saveUser, saveDevice, randomName, randomDeviceName, colorFor, fmtSize, fmtTime, typeMeta, api, socket,
     escapeHtml(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -180,5 +191,37 @@
     el.title = p.device ? `${p.name}（${p.device}）` : (p.name || '');
     return el;
   }
+
+  /* 触屏底部操作面板（手机 UI 用它替代悬停图标按钮） */
+  function bottomSheet(title, actions) {
+    const root = document.getElementById('modal-root');
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask';
+    const close = () => mask.remove();
+    const panel = document.createElement('div');
+    panel.className = 'sheet';
+    if (title) {
+      const t = document.createElement('div');
+      t.className = 'sheet-title';
+      t.textContent = title;
+      panel.appendChild(t);
+    }
+    for (const a of actions) {
+      const b = document.createElement('button');
+      b.className = 'sheet-item' + (a.danger ? ' danger' : '');
+      b.textContent = a.label;
+      b.addEventListener('click', () => { close(); if (a.onClick) a.onClick(); });
+      panel.appendChild(b);
+    }
+    const cancel = document.createElement('button');
+    cancel.className = 'sheet-item sheet-cancel';
+    cancel.textContent = '取消';
+    cancel.addEventListener('click', close);
+    panel.appendChild(cancel);
+    mask.appendChild(panel);
+    root.appendChild(mask);
+    mask.addEventListener('mousedown', (e) => { if (e.target === mask) close(); });
+  }
+  window.bottomSheet = bottomSheet;
   window.avatarEl = avatarEl;
 })();

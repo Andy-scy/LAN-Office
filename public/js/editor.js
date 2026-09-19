@@ -109,7 +109,7 @@
         body: JSON.stringify({
           userId: App.user.id,
           userName: App.user.name,
-          type: (window.matchMedia('(pointer: coarse)').matches || innerWidth < 640) ? 'mobile' : 'desktop',
+          type: (App.deviceKind === 'desktop' || innerWidth >= 1024) ? 'desktop' : 'mobile',
           mode: reviewMode ? 'review' : 'edit'
         })
       });

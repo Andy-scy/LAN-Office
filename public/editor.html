@@ -2,8 +2,27 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>编辑 · LAN Office</title>
+<script>
+(function () {
+  var ua = navigator.userAgent || '';
+  var k = 'desktop';
+  try {
+    var q = new URLSearchParams(location.search).get('ui');
+    if (q === 'mobile' || q === 'tablet' || q === 'desktop') {
+      k = q;
+    } else if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua)) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua))) {
+      k = 'tablet';
+    } else if (/Mobi|iPhone|Windows Phone/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) {
+      k = 'mobile';
+    } else if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820) {
+      k = Math.min(screen.width, screen.height) < 520 ? 'mobile' : 'tablet';
+    }
+  } catch (e) { /* 保持 desktop */ }
+  document.documentElement.dataset.device = k;
+})();
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234F46E5'/%3E%3Ctext x='16' y='22.5' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/css/style.css">
 </head>

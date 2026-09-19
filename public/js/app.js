@@ -54,18 +54,35 @@
     main.addEventListener('click', () => openFile(f));
     cardEl.appendChild(main);
 
+    const acts = [
+      { label: '打开', svg: svgOpen, run: () => openFile(f) },
+      { label: '下载', svg: svgDownload, run: () => {
+          const a = document.createElement('a');
+          a.href = `/api/files/${f.id}/download?dl=1`;
+          a.download = f.name;
+          a.click();
+        } },
+      { label: '备份历史', svg: svgHistory, run: () => showBackups(f) },
+      { label: '重命名', svg: svgRename, run: () => doRename(f) },
+      { label: '删除', svg: svgTrash, run: () => doDelete(f), danger: true }
+    ];
     const actions = document.createElement('div');
     actions.className = 'factions';
-    actions.appendChild(iconBtn('打开', svgOpen, () => openFile(f)));
-    actions.appendChild(iconBtn('下载', svgDownload, () => {
-      const a = document.createElement('a');
-      a.href = `/api/files/${f.id}/download?dl=1`;
-      a.download = f.name;
-      a.click();
-    }));
-    actions.appendChild(iconBtn('备份历史', svgHistory, () => showBackups(f)));
-    actions.appendChild(iconBtn('重命名', svgRename, () => doRename(f)));
-    actions.appendChild(iconBtn('删除', svgTrash, () => doDelete(f), 'danger'));
+    if (App.deviceKind === 'mobile') {
+      // 手机 UI：操作收进底部面板，替代悬停图标按钮
+      const more = document.createElement('button');
+      more.className = 'icon-btn more-btn';
+      more.title = '更多操作';
+      more.setAttribute('aria-label', '更多操作');
+      more.textContent = '⋯';
+      more.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.bottomSheet(f.name, acts.map((a) => ({ label: a.label, onClick: a.run, danger: a.danger })));
+      });
+      actions.appendChild(more);
+    } else {
+      for (const a of acts) actions.appendChild(iconBtn(a.label, a.svg, a.run, a.danger ? 'danger' : ''));
+    }
     cardEl.appendChild(actions);
     return cardEl;
   }
@@ -408,6 +425,7 @@
 
   /* ---------- 事件绑定 ---------- */
   $('btn-upload').addEventListener('click', () => $('file-input').click());
+  $('fab-upload').addEventListener('click', () => $('file-input').click());
   $('file-input').addEventListener('change', (e) => {
     uploadFiles(e.target.files);
     e.target.value = '';
