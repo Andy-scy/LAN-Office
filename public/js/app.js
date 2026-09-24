@@ -47,6 +47,18 @@
     const sep2 = document.createElement('span'); sep2.className = 'sep'; sep2.textContent = '·';
     const m3 = document.createElement('span'); m3.textContent = '修改于 ' + App.fmtTime(f.mtime);
     meta.append(m1, sep, m2, sep2, m3);
+    if (f.groupName) {
+      const g = document.createElement('span');
+      g.className = 'badge badge-group';
+      g.textContent = f.groupName;
+      meta.append(document.createTextNode(' '), g);
+    }
+    if (f.readonly) {
+      const ro = document.createElement('span');
+      ro.className = 'badge badge-ro';
+      ro.textContent = '只读';
+      meta.append(document.createTextNode(' '), ro);
+    }
     const editing = document.createElement('div');
     editing.className = 'fediting';
     fillEditing(editing, f);
@@ -61,11 +73,16 @@
           a.href = `/api/files/${f.id}/download?dl=1`;
           a.download = f.name;
           a.click();
-        } },
-      { label: '备份历史', svg: svgHistory, run: () => showBackups(f) },
-      { label: '重命名', svg: svgRename, run: () => doRename(f) },
-      { label: '删除', svg: svgTrash, run: () => doDelete(f), danger: true }
+        } }
     ];
+    // 访问控制开启时，管理动作（备份/重命名/删除）仅教师可见
+    if (!accessOn() || isTeacher()) {
+      acts.push(
+        { label: '备份历史', svg: svgHistory, run: () => showBackups(f) },
+        { label: '重命名', svg: svgRename, run: () => doRename(f) },
+        { label: '删除', svg: svgTrash, run: () => doDelete(f), danger: true }
+      );
+    }
     const actions = document.createElement('div');
     actions.className = 'factions';
     if (App.deviceKind === 'mobile') {
@@ -150,6 +167,12 @@
       : '未检测到 ONLYOFFICE Document Server —— 文件管理可用，在线编辑需先安装引擎（见 README）';
     $('chip-online').textContent = '👤 在线 ' + (info.online || 0) + ' 人';
     updateOnlineChipTitle();
+    renderRoleChip();
+    // 访问控制开启时，上传/新建仅教师可见
+    const teacher = isTeacher();
+    const gated = accessOn() && !teacher;
+    $('btn-upload').hidden = gated;
+    $('btn-new').hidden = gated;
     const u = App.user;
     $('chip-user').textContent = '';
     $('chip-user').appendChild(window.avatarEl({ id: u.id, name: u.name, device: App.device.name, color: App.colorFor(u.id) }));
@@ -423,6 +446,46 @@
       : '';
   }
 
+  function isTeacher() { return !!(App.me && App.me.isTeacher); }
+  function accessOn() { return !!(state.info && state.info.accessEnabled); }
+
+  function renderRoleChip() {
+    const chip = $('chip-role');
+    const adminChip = $('chip-admin');
+    if (!accessOn()) {
+      chip.hidden = true;
+      adminChip.hidden = true;
+      return;
+    }
+    chip.hidden = false;
+    chip.classList.remove('chip-link');
+    if (isTeacher()) {
+      chip.textContent = '👩‍🏫 教师';
+      chip.title = '已以教师身份登录，点击打开管理面板';
+      adminChip.hidden = false;
+      chip.onclick = () => { location.href = '/admin.html'; };
+    } else if (App.me && App.me.group) {
+      chip.textContent = '👥 ' + App.me.group.name;
+      chip.title = '当前分组，点击可换组或退出';
+      adminChip.hidden = true;
+      chip.onclick = () => {
+        window.bottomSheet('当前分组：' + App.me.group.name, [
+          { label: '换一个分组（输入新加入码）', onClick: () => window.joinGroup(() => { App.refreshMe().then(renderHeader); loadAll(); }) },
+          { label: '退出分组（仅看公共文档）', danger: true, onClick: async () => {
+              await App.api('/api/auth/leave', { method: 'POST', body: JSON.stringify({ userId: App.user.id }) });
+              await App.refreshMe(); renderHeader(); loadAll();
+            } }
+        ]);
+      };
+    } else {
+      chip.textContent = '🚪 加入分组';
+      chip.title = '输入老师的加入码，查看本组文档';
+      chip.classList.add('chip-link');
+      adminChip.hidden = true;
+      chip.onclick = () => window.joinGroup(() => { App.refreshMe().then(renderHeader); loadAll(); });
+    }
+  }
+
   /* ---------- 事件绑定 ---------- */
   $('btn-upload').addEventListener('click', () => $('file-input').click());
   $('fab-upload').addEventListener('click', () => $('file-input').click());
@@ -486,5 +549,6 @@
   });
 
   loadAll();
+  App.refreshMe().then(() => { renderHeader(); render(); });
   setInterval(loadAll, 15000); // 轻量轮询：让修改时间/大小保持新鲜
 })();

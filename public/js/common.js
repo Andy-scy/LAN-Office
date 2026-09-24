@@ -107,7 +107,12 @@
   }
 
   async function api(path, opts) {
-    const r = await fetch(path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+    const merged = Object.assign({}, opts);
+    merged.headers = Object.assign(
+      { 'Content-Type': 'application/json', 'x-lan-user': user.id },
+      (opts && opts.headers) || {}
+    );
+    const r = await fetch(path, merged);
     let data = null;
     try { data = await r.json(); } catch (_) { /* 非 JSON */ }
     if (!r.ok) {
@@ -223,5 +228,104 @@
     mask.addEventListener('mousedown', (e) => { if (e.target === mask) close(); });
   }
   window.bottomSheet = bottomSheet;
+
+  /* ---------- 身份：教师登录 / 加入分组 ---------- */
+  const me = { isTeacher: false, group: null, device: { role: null }, settings: { accessEnabled: false } };
+
+  async function refreshMe() {
+    try {
+      const r = await api('/api/me');
+      me.isTeacher = r.isTeacher;
+      me.group = r.group;
+      me.device = r.device;
+      me.settings = r.settings;
+      window.dispatchEvent(new CustomEvent('me:updated', { detail: me }));
+    } catch (_) { /* 服务未起时静默 */ }
+    return me;
+  }
+
+  function teacherLogin(onOk) {
+    modal((box, close) => {
+      const h = document.createElement('h3');
+      h.textContent = '👩‍🏫 教师登录';
+      const input = document.createElement('input');
+      input.type = 'password';
+      input.placeholder = '教师管理密码';
+      const tip = document.createElement('div');
+      tip.className = 'tip';
+      tip.textContent = '密码在服务器启动窗口显示，默认 1234，可在 config/config.json 修改。';
+      const row = document.createElement('div');
+      row.className = 'row';
+      const cancel = document.createElement('button');
+      cancel.className = 'btn ghost';
+      cancel.textContent = '取消';
+      cancel.onclick = close;
+      const ok = document.createElement('button');
+      ok.className = 'btn primary';
+      ok.textContent = '登录';
+      ok.onclick = async () => {
+        try {
+          await api('/api/auth/teacher', { method: 'POST', body: JSON.stringify({ password: input.value, userId: user.id }) });
+          close();
+          window.toast('已以教师身份登录', 'ok');
+          await refreshMe();
+          if (onOk) onOk();
+        } catch (e) {
+          tip.textContent = e.message;
+          tip.style.color = '#dc2626';
+        }
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
+      row.append(cancel, ok);
+      box.append(h, input, tip, row);
+      setTimeout(() => input.focus(), 30);
+    });
+  }
+
+  function joinGroup(onOk) {
+    modal((box, close) => {
+      const h = document.createElement('h3');
+      h.textContent = '👥 加入分组';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.inputMode = 'numeric';
+      input.maxLength = 4;
+      input.placeholder = '输入老师提供的 4 位加入码';
+      const tip = document.createElement('div');
+      tip.className = 'tip';
+      tip.textContent = '加入后只能看到本组的文档和公共文档。';
+      const row = document.createElement('div');
+      row.className = 'row';
+      const cancel = document.createElement('button');
+      cancel.className = 'btn ghost';
+      cancel.textContent = '取消';
+      cancel.onclick = close;
+      const ok = document.createElement('button');
+      ok.className = 'btn primary';
+      ok.textContent = '加入';
+      ok.onclick = async () => {
+        try {
+          const r = await api('/api/auth/group', { method: 'POST', body: JSON.stringify({ code: input.value, userId: user.id }) });
+          close();
+          window.toast('已加入分组：' + r.group.name, 'ok');
+          await refreshMe();
+          if (onOk) onOk(r);
+        } catch (e) {
+          tip.textContent = e.message;
+          tip.style.color = '#dc2626';
+        }
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
+      row.append(cancel, ok);
+      box.append(h, input, tip, row);
+      setTimeout(() => input.focus(), 30);
+    });
+  }
+
+  App.me = me;
+  App.refreshMe = refreshMe;
+  window.teacherLogin = teacherLogin;
+  window.joinGroup = joinGroup;
+  refreshMe();
   window.avatarEl = avatarEl;
 })();

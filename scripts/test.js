@@ -56,9 +56,9 @@ function spawnServer(port, dataDir) {
   return child;
 }
 
-const jsonFetch = (url, method, body) => fetch(url, {
+const jsonFetch = (url, method, body, userId) => fetch(url, {
   method,
-  headers: { 'Content-Type': 'application/json' },
+  headers: Object.assign({ 'Content-Type': 'application/json' }, userId ? { 'x-lan-user': userId } : {}),
   body: body === undefined ? undefined : JSON.stringify(body)
 });
 
@@ -271,6 +271,81 @@ async function main() {
     ok('编辑者信息包含设备名称', fu.editing.count === 1 && fu.editing.users[0].device === '平板-B2', JSON.stringify(fu.editing));
     pd1.disconnect();
     await wait(600);
+
+    console.log('— 分组与权限 —');
+    const tId = crypto.randomUUID();   // 教师
+    const sA = crypto.randomUUID();    // 一组学生
+    const sB = crypto.randomUUID();    // 二组学生
+    let ar = await jsonFetch(BASE + '/api/auth/teacher', 'POST', { userId: tId, password: '1234' });
+    ok('教师登录', ar.status === 200 && (await ar.json()).isTeacher === true);
+    ar = await jsonFetch(BASE + '/api/auth/teacher', 'POST', { userId: tId, password: 'wrong' });
+    ok('错误密码被拒绝（401）', ar.status === 401);
+
+    ar = await jsonFetch(BASE + '/api/groups', 'POST', { name: '一组', userId: tId });
+    const g1 = (await ar.json()).group;
+    ar = await jsonFetch(BASE + '/api/groups', 'POST', { name: '二组', userId: tId });
+    const g2 = (await ar.json()).group;
+    ok('教师创建分组（含 4 位加入码）', ar.status === 200 && /^\d{4}$/.test(g1.code) && /^\d{4}$/.test(g2.code), JSON.stringify(g1));
+
+    ar = await jsonFetch(BASE + '/api/auth/group', 'POST', { code: '0000', userId: sA });
+    ok('错误加入码被拒绝（404）', ar.status === 404);
+    ar = await jsonFetch(BASE + '/api/auth/group', 'POST', { code: g1.code, userId: sA });
+    ok('学生加入分组', ar.status === 200 && (await ar.json()).group.name === '一组');
+
+    ar = await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { accessEnabled: true, studentVisibility: 'hidden' }, userId: tId });
+    ok('开启访问控制', ar.status === 200 && (await ar.json()).settings.accessEnabled === true);
+
+    ar = await jsonFetch(BASE + '/api/files/create', 'POST', { ext: 'docx', name: '学生偷建.docx', userId: sA });
+    ok('学生新建文档被拒（403）', ar.status === 403);
+    ar = await jsonFetch(BASE + '/api/files/upload', 'POST', { userId: sA });
+    ok('学生上传被拒（403）', ar.status === 403);
+
+    ar = await jsonFetch(BASE + '/api/files/create', 'POST', { ext: 'docx', name: '组A任务.docx', userId: tId });
+    const fA = (await ar.json()).file;
+    ar = await jsonFetch(BASE + '/api/files/create', 'POST', { ext: 'docx', name: '公共任务.docx', userId: tId });
+    const fPub = (await ar.json()).file;
+    ar = await jsonFetch(`${BASE}/api/files/${fA.id}/assign`, 'POST', { groupId: g1.id, userId: tId });
+    ok('教师将文件归入组A', ar.status === 200 && (await ar.json()).file.groupId === g1.id);
+
+    await jsonFetch(BASE + '/api/auth/group', 'POST', { code: g2.code, userId: sB });
+    let fr = await (await fetch(BASE + '/api/files', { headers: { 'x-lan-user': sB } })).json();
+    ok('组B学生看不到组A文档（隐藏模式）', !fr.files.some((f) => f.id === fA.id), JSON.stringify(fr.files.map((f) => f.name)));
+    ok('组B学生可见公共文档（公共=人人可编辑）', fr.files.some((f) => f.id === fPub.id && f.readonly === false));
+    fr = await (await fetch(BASE + '/api/files', { headers: { 'x-lan-user': sA } })).json();
+    const faView = fr.files.find((f) => f.id === fA.id);
+    ok('组A学生可编辑本组文档', !!faView && faView.readonly === false);
+    ok('组A学生也可编辑公共文档', fr.files.some((f) => f.id === fPub.id && f.readonly === false));
+
+    ar = await fetch(`${BASE}/api/files/${fA.id}/meta`, { headers: { 'x-lan-user': sB } });
+    ok('组B学生访问组A文档 meta 返回 404', ar.status === 404);
+    ar = await jsonFetch(`${BASE}/api/files/${fA.id}/editor-config`, 'POST', { userId: sB, userName: 'B' });
+    ok('组B学生取组A编辑配置被拒（404）', ar.status === 404);
+    ar = await jsonFetch(`${BASE}/api/files/${fA.id}/forcesave`, 'POST', { userId: sB });
+    ok('只读文档 forcesave 被拒（403）', ar.status === 403);
+
+    ar = await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { studentVisibility: 'readonly' }, userId: tId });
+    fr = await (await fetch(BASE + '/api/files', { headers: { 'x-lan-user': sB } })).json();
+    ok('切换只读模式后组B可见组A文档', fr.files.some((f) => f.id === fA.id && f.readonly === true));
+    ar = await fetch(`${BASE}/api/files/${fA.id}/meta`, { headers: { 'x-lan-user': sB } });
+    const metaB = await ar.json();
+    ok('只读文档 meta 返回 canEdit=false', ar.status === 200 && metaB.canEdit === false, JSON.stringify(metaB).slice(0, 120));
+    ar = await fetch(`${BASE}/api/files/${fPub.id}/meta`, { headers: { 'x-lan-user': sB } });
+    ok('公共文档 meta 返回 canEdit=true', ar.status === 200 && (await ar.json()).canEdit === true);
+
+    ar = await jsonFetch(BASE + '/api/surveys', 'POST', { title: '学生卷', questions: [{ text: 'q', options: ['a', 'b'] }], userId: sA });
+    ok('学生创建问卷被拒（403）', ar.status === 403);
+
+    ar = await jsonFetch(`${BASE}/api/files/${fA.id}/rename`, 'POST', { name: '改名.try', userId: sB });
+    ok('学生重命名被拒（403）', ar.status === 403);
+
+    await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { studentVisibility: 'hidden' }, userId: tId });
+    ar = await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { accessEnabled: false }, userId: tId });
+    ok('关闭访问控制（回到人人可操作）', ar.status === 200);
+    await jsonFetch(`${BASE}/api/files/${fA.id}`, 'DELETE', undefined, tId);
+    await jsonFetch(`${BASE}/api/files/${fPub.id}`, 'DELETE', undefined, tId);
+    ar = await jsonFetch(`${BASE}/api/groups/${g1.id}?userId=${tId}`, 'DELETE');
+    ok('教师解散分组', ar.status === 200);
+    await jsonFetch(`${BASE}/api/groups/${g2.id}?userId=${tId}`, 'DELETE');
 
     console.log('— 端口占用自增 + 手动放文件自动识别 —');
     const child2 = spawnServer(PORT, 'data-test-2');

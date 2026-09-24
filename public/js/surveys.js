@@ -394,5 +394,11 @@
     $('chip-online').textContent = '👤 在线 ' + snap.online.count + ' 人';
   });
 
+  // 访问控制开启时，问卷仅教师可创建
+  App.refreshMe().then((me) => {
+    if (me.settings.accessEnabled && !me.isTeacher) {
+      $('btn-new').hidden = true;
+    }
+  });
   loadList();
 })();

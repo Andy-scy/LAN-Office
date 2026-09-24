@@ -322,6 +322,28 @@ function restoreBackup(meta, backupName) {
   return meta;
 }
 
+/** 文件归组 / 解除归组（分组权限功能使用） */
+function setFileGroupById(id, groupId) {
+  const meta = get(id);
+  if (!meta) return null;
+  meta.groupId = groupId || null;
+  saveIndex();
+  return meta;
+}
+
+/** 某分组被解散时，把该组全部文件复位为公共（返回复位数量） */
+function clearGroup(groupId) {
+  let n = 0;
+  for (const m of metas) {
+    if (m.groupId && m.groupId === String(groupId)) {
+      m.groupId = null;
+      n++;
+    }
+  }
+  if (n) saveIndex();
+  return n;
+}
+
 function documentTypeInfo(ext) {
   const e = String(ext || '').toLowerCase();
   let documentType = 'word';
@@ -340,5 +362,6 @@ module.exports = {
   addUpload, create, rename, remove,
   applySavedFile, bumpVersionIfIdle,
   backupFile, listBackups, restoreBackup,
-  documentTypeInfo, sanitizeFileName, extOf, uniqueName, dirs
+  documentTypeInfo, sanitizeFileName, extOf, uniqueName, dirs,
+  setFileGroupById, clearGroup
 };

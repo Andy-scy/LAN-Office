@@ -12,12 +12,13 @@ const { exec } = require('child_process');
 const config = require('./config');
 const fileManager = require('./fileManager');
 const surveys = require('./surveys');
+const access = require('./access');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 const { registerRoutes, setPort } = require('./routes');
 const { attach: attachWebsocket } = require('./websocket');
 
-const VERSION = '1.2.1';
+const VERSION = '1.3.0';
 
 function isPortFree(port) {
   return new Promise((resolve) => {
@@ -69,6 +70,7 @@ function banner(port, portChanged) {
     console.log('    → 下载地址: https://www.onlyoffice.com/download-docs.aspx  （详见 README）');
   }
   console.log(`  数据目录: ${config.dataPath}`);
+  console.log(`  教师管理密码: ${config.teacherPassword}   （登录"管理面板"用，可在 config/config.json 修改）`);
   console.log('');
   if (process.platform === 'win32') {
     console.log('  提示: 如果其他设备无法访问，多半是 Windows 防火墙：');
@@ -94,6 +96,7 @@ function banner(port, portChanged) {
 async function main() {
   fileManager.init();
   surveys.init();
+  access.init();
   const { port, changed } = await findFreePort(config.port);
   setPort(port);
   ds.setRuntimePort(port);

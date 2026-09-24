@@ -6,6 +6,7 @@
   const fileId = params.get('id') || '';
   const reviewMode = params.get('mode') === 'review';
   const REVIEWABLE = ['docx', 'doc', 'odt']; // 修订模式（Track Changes）仅对文字文档有意义
+  let canEditFile = true;
 
   let currentFile = null;
   let dirty = false;
@@ -89,7 +90,7 @@
 
     // 修订模式开关：仅对可编辑文字文档显示（Track Changes，修改按作者颜色+名字标注）
     const modeBtn = $('ed-mode');
-    if (REVIEWABLE.includes(meta.ext)) {
+    if (REVIEWABLE.includes(meta.ext) && canEditFile) {
       modeBtn.hidden = false;
       modeBtn.textContent = reviewMode ? '🖊 修订模式：开' : '🖊 修订模式：关';
       modeBtn.title = reviewMode
@@ -125,11 +126,25 @@
           '<li>回到本页面点击“重试”。</li>' +
           '</ol>' +
           '<p>文件管理功能不受影响。详见项目 README。</p>', true);
+      } else if (e.status === 403) {
+        showOverlay('无权访问',
+          '<p>该文档对你是只读的，或你不属于可编辑它的分组。</p>' +
+          '<p>如需编辑权限，请联系老师。</p>', false);
+      } else if (e.status === 404) {
+        showOverlay('文件不存在',
+          '<p>该文件已被删除，或你不属于可查看它的分组。</p>', false);
       } else {
         showOverlay('无法打开文件', `<p>${App.escapeHtml(e.message)}</p>`, false);
       }
       setStatus('', '');
       return;
+    }
+
+    // 只读文档：隐藏修订开关，只读提示
+    if (r.canEdit === false) {
+      canEditFile = false;
+      $('ed-mode').hidden = true;
+      setStatus('', '只读模式 —— 可查看，不可修改');
     }
 
     loadEditor(r);
@@ -145,7 +160,7 @@
           events: {
             onDocumentReady: () => {
               hideOverlay();
-              setStatus('', '编辑器已就绪');
+              setStatus('', canEditFile ? '编辑器已就绪' : '编辑器已就绪（只读）');
             },
             onDocumentStateChange: (e) => {
               dirty = !!e.data;

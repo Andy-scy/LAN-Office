@@ -14,11 +14,25 @@ const config = require('./config');
 const fileManager = require('./fileManager');
 const collab = require('./collaboration');
 const surveys = require('./surveys');
+const access = require('./access');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 
-const VERSION = '1.2.1';
+const VERSION = '1.3.0';
 const ID_RE = /^[0-9a-f-]{8,64}$/i;
+
+/** 从请求中解析设备身份（请求头优先，兼容 query/body） */
+function userIdFrom(req) {
+  const h = req.get && req.get('x-lan-user');
+  const q = req.query && req.query.userId;
+  const b = req.body && req.body.userId;
+  return access.cleanDeviceId(h || q || b || '');
+}
+
+/** 访问控制开启时，仅教师可执行；关闭时保持人人可操作 */
+function requireTeacherIfEnabled(req) {
+  if (access.enabled()) access.requireTeacher(userIdFrom(req));
+}
 
 const MIME = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -97,6 +111,12 @@ function registerRoutes(app) {
   }
 
   app.post('/api/files/upload', upload.array('files'), uploadErrors, (req, res) => {
+    try {
+      requireTeacherIfEnabled(req);
+    } catch (e) {
+      for (const f of req.files || []) { try { fs.rmSync(f.path, { force: true }); } catch (_) { /* 忽略 */ } }
+      return res.status(e.status || 403).json({ error: e.message });
+    }
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ error: '没有收到文件' });
     let providedNames = [];
@@ -116,6 +136,83 @@ function registerRoutes(app) {
     res.json({ files: created, failed });
   });
 
+  /* ---------- 身份与分组 ---------- */
+  app.get('/api/me', (req, res) => {
+    const uid = userIdFrom(req);
+    const d = access.getDevice(uid);
+    const groupId = d.groupId;
+    res.json({
+      device: d,
+      isTeacher: d.role === 'teacher',
+      group: groupId ? { id: groupId, name: access.groupName(groupId) } : null,
+      settings: access.settings()
+    });
+  });
+
+  app.post('/api/auth/teacher', (req, res) => {
+    try {
+      const d = access.authTeacher(userIdFrom(req), (req.body || {}).password);
+      res.json({ device: d, isTeacher: d.role === 'teacher' });
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/auth/group', (req, res) => {
+    try {
+      const r = access.joinGroup(userIdFrom(req), (req.body || {}).code);
+      res.json(r);
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/auth/leave', (req, res) => {
+    access.leaveGroup(userIdFrom(req));
+    res.json({ ok: true });
+  });
+
+  app.get('/api/groups/names', (req, res) => {
+    res.json({ groups: access.listGroupNames() });
+  });
+
+  app.get('/api/groups', (req, res) => {
+    try {
+      res.json({ groups: access.listGroups(userIdFrom(req)) });
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/groups', (req, res) => {
+    try {
+      access.requireTeacher(userIdFrom(req));
+      res.json({ group: access.createGroup((req.body || {}).name, userIdFrom(req)) });
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/groups/:id', (req, res) => {
+    try {
+      access.requireTeacher(userIdFrom(req));
+      const ok = access.removeGroup(req.params.id, userIdFrom(req));
+      if (!ok) return res.status(404).json({ error: '分组不存在' });
+      fileManager.clearGroup(req.params.id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/settings', (req, res) => {
+    try {
+      res.json({ settings: access.setSettings((req.body || {}).settings, userIdFrom(req)) });
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
   /* ---------- 查询 ---------- */
   app.get('/api/info', (req, res) => {
     const st = ds.status();
@@ -129,19 +226,25 @@ function registerRoutes(app) {
       ds: { available: st.available, url: ds.publicDsUrl(), jwt: st.jwt },
       online: collab.onlineCount(),
       fileCount: fileManager.list().length,
-      dataDir: config.dataPath
+      dataDir: config.dataPath,
+      accessEnabled: access.enabled()
     });
   });
 
   app.get('/api/files', (req, res) => {
+    const uid = userIdFrom(req);
     const st = ds.status();
     res.json({
-      files: fileManager.list().map((m) => ({
+      files: access.filterList(uid, fileManager.list()).map(({ meta: m, access: a, groupName: gName }) => ({
         id: m.id, name: m.name, ext: m.ext, size: m.size,
         mtime: m.mtime, createdAt: m.createdAt, version: m.version,
+        groupId: m.groupId || null,
+        groupName: gName,
+        readonly: !a.edit,
         editing: { count: collab.editingCount(m.id), users: collab.editingUsers(m.id) }
       })),
-      ds: { available: st.available, url: ds.publicDsUrl() }
+      ds: { available: st.available, url: ds.publicDsUrl() },
+      settings: access.settings()
     });
   });
 
@@ -149,17 +252,27 @@ function registerRoutes(app) {
     const id = requireValidId(req, res); if (!id) return;
     const meta = fileManager.get(id);
     if (!meta) return res.status(404).json({ error: '文件不存在' });
+    const a = access.fileAccess(userIdFrom(req), meta);
+    if (!a.view) return res.status(404).json({ error: '文件不存在' }); // 无权查看时不暴露其存在
     res.json({
       file: {
         id: meta.id, name: meta.name, ext: meta.ext, size: meta.size,
-        mtime: meta.mtime, createdAt: meta.createdAt, version: meta.version
+        mtime: meta.mtime, createdAt: meta.createdAt, version: meta.version,
+        groupId: meta.groupId || null,
+        groupName: meta.groupId ? access.groupName(meta.groupId) : null
       },
+      canEdit: a.edit,
       editing: { count: collab.editingCount(meta.id), users: collab.editingUsers(meta.id) }
     });
   });
 
   /* ---------- 新建 / 重命名 / 删除 / 备份 ---------- */
   app.post('/api/files/create', (req, res) => {
+    try {
+      requireTeacherIfEnabled(req);
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: e.message });
+    }
     const b = req.body || {};
     const ext = String(b.ext || b.type || '').toLowerCase().replace(/^\./, '');
     if (!fileManager.FIRST_CLASS.includes(ext)) {
@@ -175,6 +288,11 @@ function registerRoutes(app) {
 
   app.post('/api/files/:id/rename', (req, res) => {
     const id = requireValidId(req, res); if (!id) return;
+    try {
+      requireTeacherIfEnabled(req);
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: e.message });
+    }
     const meta = fileManager.get(id);
     if (!meta) return res.status(404).json({ error: '文件不存在' });
     try {
@@ -188,6 +306,11 @@ function registerRoutes(app) {
 
   app.delete('/api/files/:id', (req, res) => {
     const id = requireValidId(req, res); if (!id) return;
+    try {
+      requireTeacherIfEnabled(req);
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: e.message });
+    }
     const meta = fileManager.get(id);
     if (!meta) return res.status(404).json({ error: '文件不存在' });
     const busy = collab.editingCount(meta.id);
@@ -198,6 +321,11 @@ function registerRoutes(app) {
 
   app.get('/api/files/:id/backups', (req, res) => {
     const id = requireValidId(req, res); if (!id) return;
+    try {
+      requireTeacherIfEnabled(req);
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: e.message });
+    }
     const list = fileManager.listBackups(id);
     if (list === null) return res.status(404).json({ error: '文件不存在' });
     res.json({ backups: list });
@@ -205,6 +333,11 @@ function registerRoutes(app) {
 
   app.post('/api/files/:id/backups/restore', (req, res) => {
     const id = requireValidId(req, res); if (!id) return;
+    try {
+      requireTeacherIfEnabled(req);
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: e.message });
+    }
     const meta = fileManager.get(id);
     if (!meta) return res.status(404).json({ error: '文件不存在' });
     if (collab.editingCount(meta.id) > 0) {
@@ -216,6 +349,21 @@ function registerRoutes(app) {
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
+  });
+
+  /** 文件归组（教师）：groupId 为空表示公共文档 */
+  app.post('/api/files/:id/assign', (req, res) => {
+    const id = requireValidId(req, res); if (!id) return;
+    try {
+      access.requireTeacher(userIdFrom(req));
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: e.message });
+    }
+    const meta = fileManager.get(id);
+    if (!meta) return res.status(404).json({ error: '文件不存在' });
+    const groupId = (req.body || {}).groupId || null;
+    const updated = fileManager.setFileGroupById(id, groupId ? String(groupId) : null);
+    res.json({ file: updated });
   });
 
   /* ---------- 下载（供用户与 Document Server 使用） ---------- */
@@ -236,6 +384,8 @@ function registerRoutes(app) {
     const id = requireValidId(req, res); if (!id) return;
     const meta = fileManager.get(id);
     if (!meta) return res.status(404).json({ error: '文件不存在' });
+    const a = access.fileAccess(userIdFrom(req), meta);
+    if (!a.view) return res.status(404).json({ error: '文件不存在' }); // 无权查看时不暴露其存在
     const st = ds.status();
     if (!st.available) {
       return res.status(503).json({
@@ -244,15 +394,24 @@ function registerRoutes(app) {
       });
     }
     const user = editorUserFromBody(req.body);
-    const mode = (req.body || {}).mode === 'review' ? 'review' : 'edit';
+    // 只读权限时强制 view 模式（组外文档等），忽略前端的修订模式请求
+    const requestedMode = (req.body || {}).mode === 'review' ? 'review' : 'edit';
+    const mode = a.edit ? requestedMode : 'view';
     const cfg = ds.buildEditorConfig(meta, user, { type: (req.body || {}).type, lang: 'zh-CN', mode });
-    res.json({ config: cfg, ds: { url: ds.publicDsUrl(), available: true }, user });
+    res.json({
+      config: cfg,
+      ds: { url: ds.publicDsUrl(), available: true },
+      user,
+      canEdit: a.edit
+    });
   });
 
   app.post('/api/files/:id/forcesave', async (req, res) => {
     const id = requireValidId(req, res); if (!id) return;
     const meta = fileManager.get(id);
     if (!meta) return res.status(404).json({ error: '文件不存在' });
+    const a = access.fileAccess(userIdFrom(req), meta);
+    if (!a.edit) return res.status(403).json({ error: '该文档对你是只读的' });
     const result = await ds.forcesave(meta);
     res.json(result);
   });
@@ -293,6 +452,11 @@ function registerRoutes(app) {
   });
 
   app.post('/api/surveys', (req, res) => {
+    try {
+      requireTeacherIfEnabled(req);
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: '问卷仅教师可创建' });
+    }
     const b = req.body || {};
     try {
       const survey = surveys.create({

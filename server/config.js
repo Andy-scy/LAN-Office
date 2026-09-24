@@ -21,7 +21,8 @@ const DEFAULTS = {
     callbackHost: ''   // DS 回调本服务用的主机名（默认 127.0.0.1，即 DS 与本服务同机；跨机部署时改为本机局域网 IP）
   },
   backup: { maxPerFile: 30 },
-  upload: { maxSizeMB: 200 }
+  upload: { maxSizeMB: 200 },
+  teacherPassword: '1234'
 };
 
 function deepMerge(base, extra) {

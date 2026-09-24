@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>管理面板 · LAN Office</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234F46E5'/%3E%3Ctext x='16' y='22.5' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/style.css">
+<script>
+(function () {
+  var ua = navigator.userAgent || '';
+  var k = 'desktop';
+  try {
+    var q = new URLSearchParams(location.search).get('ui');
+    if (q === 'mobile' || q === 'tablet' || q === 'desktop') {
+      k = q;
+    } else if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua)) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua))) {
+      k = 'tablet';
+    } else if (/Mobi|iPhone|Windows Phone/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) {
+      k = 'mobile';
+    } else if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820) {
+      k = Math.min(screen.width, screen.height) < 520 ? 'mobile' : 'tablet';
+    }
+  } catch (e) { /* 保持 desktop */ }
+  document.documentElement.dataset.device = k;
+})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>
+    </div>
+    <div class="brand-text">
+      <h1>管理面板</h1>
+      <span class="sub">分组 · 可见性 · 文件归组</span>
+    </div>
+  </div>
+  <div class="chips">
+    <a class="chip chip-link" href="/" title="返回文件列表">🗂 文件列表</a>
+    <button class="chip chip-user" id="chip-logout" hidden title="退出教师身份">退出教师</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 教师门禁 -->
+  <section class="card-panel" id="gate">
+    <h2>👩‍🏫 教师登录</h2>
+    <p class="tip">本面板用于管理分组与文档可见性。请输入教师管理密码（服务器启动窗口会显示，默认 1234，可在 config/config.json 修改）。</p>
+    <div class="row-gap">
+      <input type="password" id="gate-pass" placeholder="教师管理密码" style="max-width:260px">
+      <button class="btn primary" id="gate-ok">进入面板</button>
+    </div>
+    <p class="tip" id="gate-err" style="color:#dc2626" hidden></p>
+  </section>
+
+  <div id="panel" hidden>
+    <section class="card-panel">
+      <h2>① 访问控制</h2>
+      <label class="adm-row">
+        <input type="checkbox" id="set-enabled">
+        <span><b>启用分组访问控制</b> —— 开启后：学生凭加入码进入分组，只能编辑本组与公共文档；上传/新建/删除/重命名仅教师可操作；问卷仅教师可创建。</span>
+      </label>
+      <label class="adm-row" id="row-vis">
+        <span><b>其他组的文档对学生：</b></span>
+        <label><input type="radio" name="vis" value="hidden"> 完全隐藏</label>
+        <label><input type="radio" name="vis" value="readonly"> 可查看（只读）</label>
+      </label>
+      <p class="tip" id="set-saved" hidden>已保存 ✓</p>
+    </section>
+
+    <section class="card-panel">
+      <h2>② 分组管理</h2>
+      <div class="row-gap">
+        <input type="text" id="g-name" placeholder="新分组名称（如：一组）" style="max-width:220px" maxlength="24">
+        <button class="btn primary" id="g-add">＋ 创建分组</button>
+      </div>
+      <p class="tip">把"加入码"投在黑板上或念给学生，学生打开本网站后输入加入码即进入对应分组。</p>
+      <div class="list" id="g-list"></div>
+    </section>
+
+    <section class="card-panel">
+      <h2>③ 文件归组</h2>
+      <p class="tip">"公共"= 所有人可编辑；归入某组 = 只有该组学生可编辑（他组按上面的可见性设置隐藏或只读）。</p>
+      <div class="list" id="f-list"></div>
+    </section>
+
+    <section class="row-gap">
+      <a class="btn ghost" href="/">← 返回文件列表</a>
+    </section>
+  </div>
+</main>
+
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>
