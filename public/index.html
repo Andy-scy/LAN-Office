@@ -31,23 +31,31 @@
 <header class="topbar">
   <div class="brand">
     <div class="logo" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13l2 2 4-4"/></svg>
     </div>
     <div class="brand-text">
       <h1>LAN Office</h1>
       <span class="sub">局域网多人协同办公</span>
     </div>
   </div>
-  <div class="chips">
-    <span class="chip" id="chip-server" title="局域网访问地址">…</span>
-    <span class="chip chip-ds" id="chip-ds"><i class="dot"></i>编辑引擎</span>
-    <span class="chip" id="chip-online">👤 在线 1 人</span>
-    <span class="chip" id="chip-files">🗂 0 个文件</span>
-    <span class="chip chip-link" id="chip-role" hidden></span>
-    <a class="chip chip-link" href="/surveys.html" title="创建问卷、填写与查看统计">📋 问卷</a>
-    <a class="chip chip-link" id="chip-admin" href="/admin.html" hidden title="分组、可见性与文件归组">🛠 管理面板</a>
-    <button class="chip chip-user" id="chip-user" title="点击修改昵称与设备名称">…</button>
+  <div class="top-status">
+    <span class="status-item" id="chip-server" title="局域网访问地址">…</span>
+    <span class="status-item status-ds" id="chip-ds" title="OnlyOffice 编辑引擎状态"><i class="dot"></i><span>编辑引擎</span></span>
+    <span class="status-item" id="chip-online">…</span>
+    <span class="status-item" id="chip-files">…</span>
   </div>
+  <nav class="top-actions">
+    <a class="nav-btn" href="/surveys.html" title="创建问卷、填写与查看统计">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
+      <span>问卷</span>
+    </a>
+    <a class="nav-btn" id="chip-admin" href="/admin.html" hidden title="分组、可见性与文件归组">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>管理面板</span>
+    </a>
+    <button class="nav-btn" id="chip-role" hidden></button>
+    <button class="user-btn" id="chip-user" title="点击修改昵称与设备名称">…</button>
+  </nav>
 </header>
 
 <main class="wrap">
@@ -75,7 +83,7 @@
   <section class="files" id="files" aria-live="polite"></section>
 
   <section class="empty" id="empty" hidden>
-    <div class="empty-icon">📂</div>
+    <svg class="empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="#c3c8d4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
     <h2>还没有文件</h2>
     <p>上传 Word / Excel / PowerPoint 文件，或直接新建一个空白文档。<br>同一局域网的设备打开同一文件即可多人协同编辑。</p>
   </section>
@@ -84,7 +92,10 @@
 </main>
 
 <div class="drop-overlay" id="drop-overlay" hidden>
-  <div class="drop-box">📥 松开鼠标，上传文件</div>
+  <div class="drop-box">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+    松开鼠标，上传文件
+  </div>
 </div>
 <button class="fab" id="fab-upload" aria-label="上传文件" title="上传文件">
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>

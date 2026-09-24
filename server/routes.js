@@ -18,7 +18,7 @@ const access = require('./access');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const ID_RE = /^[0-9a-f-]{8,64}$/i;
 
 /** 从请求中解析设备身份（请求头优先，兼容 query/body） */

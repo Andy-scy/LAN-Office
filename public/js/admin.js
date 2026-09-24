@@ -87,7 +87,7 @@
         const del = document.createElement('button');
         del.className = 'icon-btn danger';
         del.title = '解散该分组（组内文件自动变回公共）';
-        del.textContent = '🗑';
+        del.innerHTML = window.icon('trash', 15);
         del.onclick = () => {
           window.modal((box, close) => {
             const h = document.createElement('h3');

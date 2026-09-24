@@ -38,7 +38,7 @@
 
     const tile = document.createElement('span');
     tile.className = 'ftile ppt';
-    tile.textContent = '📋';
+    tile.innerHTML = window.icon('clipboard2', 18);
     card.appendChild(tile);
 
     const main = document.createElement('div');
@@ -64,9 +64,9 @@
     const actions = document.createElement('div');
     actions.className = 'factions sv-actions';
     if (s.mine) {
-      actions.appendChild(iconBtn('查看结果', '📊', () => openResult(s.id), ''));
-      actions.appendChild(iconBtn('导出 CSV', '⬇️', () => exportCsv(s), 'sv-hide-m'));
-      actions.appendChild(iconBtn('删除', '🗑️', () => doDelete(s), 'danger'));
+      actions.appendChild(iconBtn('查看结果', window.icon('chart', 15), () => openResult(s.id), ''));
+      actions.appendChild(iconBtn('导出 CSV', window.icon('download', 15), () => exportCsv(s), 'sv-hide-m'));
+      actions.appendChild(iconBtn('删除', window.icon('trash', 15), () => doDelete(s), 'danger'));
     }
     const fillBtn = document.createElement('button');
     fillBtn.className = 'btn primary sv-fill-btn';
@@ -79,12 +79,12 @@
     return card;
   }
 
-  function iconBtn(title, glyph, onClick, cls) {
+  function iconBtn(title, svg, onClick, cls) {
     const b = document.createElement('button');
-    b.className = 'icon-btn emoji-btn' + (cls ? ' ' + cls : '');
+    b.className = 'icon-btn' + (cls ? ' ' + cls : '');
     b.title = title;
     b.setAttribute('aria-label', title);
-    b.textContent = glyph;
+    b.innerHTML = svg;
     b.addEventListener('click', onClick);
     return b;
   }
@@ -108,7 +108,7 @@
     const delQ = document.createElement('button');
     delQ.className = 'icon-btn danger';
     delQ.title = '删除本题';
-    delQ.textContent = '✕';
+    delQ.innerHTML = window.icon('trash', 14);
     delQ.onclick = () => box.remove();
     head.appendChild(delQ);
     const opts = document.createElement('div');
@@ -217,7 +217,7 @@
     row.className = 'row-gap';
     const back = document.createElement('button');
     back.className = 'btn ghost';
-    back.textContent = '← 返回列表';
+    back.innerHTML = window.icon('arrow-left', 14) + '<span style="margin-left:4px">返回列表</span>';
     back.onclick = () => { show('list'); loadList(); };
     const submit = document.createElement('button');
     submit.className = 'btn primary';
@@ -293,7 +293,7 @@
         const barWrap = document.createElement('div');
         barWrap.className = 'result-bar';
         const fill = document.createElement('i');
-        fill.style.width = Math.round((n / total) * 100) + '%';
+        fill.style.transform = 'scaleX(' + (n / total) + ')';
         barWrap.appendChild(fill);
         const num = document.createElement('span');
         num.className = 'result-num';
@@ -330,12 +330,12 @@
     row.className = 'row-gap';
     const back = document.createElement('button');
     back.className = 'btn ghost';
-    back.textContent = '← 返回列表';
+    back.innerHTML = window.icon('arrow-left', 14) + '<span style="margin-left:4px">返回列表</span>';
     back.onclick = () => { show('list'); loadList(); };
     const csv = document.createElement('a');
     csv.className = 'btn primary';
     csv.href = `/api/surveys/${encodeURIComponent(s.id)}/export?userId=${encodeURIComponent(App.user.id)}`;
-    csv.textContent = '⬇ 导出 CSV（Excel 可打开）';
+    csv.innerHTML = window.icon('download', 14) + '<span style="margin-left:4px">导出 CSV（Excel 可打开）</span>';
     row.append(back, csv);
     v.appendChild(row);
   }
@@ -391,8 +391,17 @@
   $('chip-user').addEventListener('click', () => window.toast('到首页点右上角头像即可修改昵称与设备名'));
 
   App.socket.on('presence:update', (snap) => {
-    $('chip-online').textContent = '👤 在线 ' + snap.online.count + ' 人';
+    $('chip-online').textContent = snap.online.count + ' 台设备在线';
   });
+
+  // 用户身份按钮：头像 + 昵称 + 设备名
+  function renderUserChip() {
+    const el = $('chip-user');
+    el.textContent = '';
+    el.appendChild(window.avatarEl({ id: App.user.id, name: App.user.name, color: App.colorFor(App.user.id) }));
+    el.appendChild(document.createTextNode(' ' + App.user.name + ' · ' + App.device.name));
+  }
+  renderUserChip();
 
   // 访问控制开启时，问卷仅教师可创建
   App.refreshMe().then((me) => {

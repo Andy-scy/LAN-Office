@@ -37,16 +37,19 @@
       <span class="sub">分组 · 可见性 · 文件归组</span>
     </div>
   </div>
-  <div class="chips">
-    <a class="chip chip-link" href="/" title="返回文件列表">🗂 文件列表</a>
-    <button class="chip chip-user" id="chip-logout" hidden title="退出教师身份">退出教师</button>
+  <div class="top-actions">
+    <a class="nav-btn" href="/" title="返回文件列表">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <span>文件列表</span>
+    </a>
+    <button class="nav-btn" id="chip-logout" hidden title="退出教师身份（回到普通访客）">退出教师</button>
   </div>
 </header>
 
 <main class="wrap">
   <!-- 教师门禁 -->
   <section class="card-panel" id="gate">
-    <h2>👩‍🏫 教师登录</h2>
+      <h2>教师登录</h2>
     <p class="tip">本面板用于管理分组与文档可见性。请输入教师管理密码（服务器启动窗口会显示，默认 1234，可在 config/config.json 修改）。<br><b>同一时间只有一台电脑是教师：</b>在新电脑登录后，之前登录的教师电脑会自动退出教师身份。</p>
     <div class="row-gap">
       <input type="password" id="gate-pass" placeholder="教师管理密码" style="max-width:260px">
@@ -57,7 +60,7 @@
 
   <div id="panel" hidden>
     <section class="card-panel">
-      <h2>① 访问控制</h2>
+      <h2>访问控制</h2>
       <label class="adm-row">
         <input type="checkbox" id="set-enabled">
         <span><b>启用分组访问控制</b> —— 开启后：学生凭加入码进入分组，只能编辑本组与公共文档；上传/新建/删除/重命名仅教师可操作；问卷仅教师可创建。</span>
@@ -67,11 +70,11 @@
         <label><input type="radio" name="vis" value="hidden"> 完全隐藏</label>
         <label><input type="radio" name="vis" value="readonly"> 可查看（只读）</label>
       </label>
-      <p class="tip" id="set-saved" hidden>已保存 ✓</p>
+      <p class="tip" id="set-saved" hidden>设置已保存</p>
     </section>
 
     <section class="card-panel">
-      <h2>② 分组管理</h2>
+      <h2>分组管理</h2>
       <div class="row-gap">
         <input type="text" id="g-name" placeholder="新分组名称（如：一组）" style="max-width:220px" maxlength="24">
         <button class="btn primary" id="g-add">＋ 创建分组</button>
@@ -81,13 +84,13 @@
     </section>
 
     <section class="card-panel">
-      <h2>③ 文件归组</h2>
+      <h2>文件归组</h2>
       <p class="tip">"公共"= 所有人可编辑；归入某组 = 只有该组学生可编辑（他组按上面的可见性设置隐藏或只读）。</p>
       <div class="list" id="f-list"></div>
     </section>
 
     <section class="row-gap">
-      <a class="btn ghost" href="/">← 返回文件列表</a>
+      <a class="btn ghost" href="/"><span style="display:inline-flex;vertical-align:-3px;margin-right:2px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></span>返回文件列表</a>
     </section>
   </div>
 </main>

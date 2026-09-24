@@ -19,7 +19,7 @@
     filesEl.textContent = '';
     for (const f of list) filesEl.appendChild(card(f));
     emptyEl.hidden = list.length > 0;
-    $('chip-files').textContent = `🗂 ${state.files.length} 个文件`;
+    $('chip-files').textContent = state.files.length + ' 个文件';
   }
 
   function card(f) {
@@ -150,14 +150,14 @@
       render();
     } catch (e) {
       const hint = $('foot-hint');
-      if (hint) hint.textContent = '✘ 加载失败：' + e.message;
+      if (hint) hint.textContent = '加载失败：' + e.message;
       window.toast('加载失败：' + e.message, 'error');
     }
   }
 
   function renderHeader() {
     const info = state.info;
-    $('chip-server').textContent = '📍 ' + info.primary + ':' + info.port;
+    $('chip-server').textContent = info.primary + ':' + info.port;
     $('chip-server').title = '局域网访问地址 http://' + info.primary + ':' + info.port;
     const dsChip = $('chip-ds');
     dsChip.classList.toggle('ok', !!state.ds.available);
@@ -165,7 +165,7 @@
     dsChip.title = state.ds.available
       ? 'OnlyOffice 编辑引擎已连接'
       : '未检测到 ONLYOFFICE Document Server —— 文件管理可用，在线编辑需先安装引擎（见 README）';
-    $('chip-online').textContent = '👤 在线 ' + (info.online || 0) + ' 人';
+    $('chip-online').textContent = (info.online || 0) + ' 台设备在线';
     updateOnlineChipTitle();
     renderRoleChip();
     // 访问控制开启时，上传/新建仅教师可见
@@ -181,7 +181,7 @@
     if (state.ds.available) {
       hint.textContent = '数据保存在服务器 data/ 目录；编辑内容会自动保存并生成备份。';
     } else {
-      hint.textContent = '⚠ 尚未安装 ONLYOFFICE Document Server（编辑引擎）：文件管理功能可用，在线编辑 Office 前请先安装，步骤见 README。';
+      hint.textContent = '尚未安装 ONLYOFFICE Document Server（编辑引擎）：文件管理功能可用，在线编辑 Office 前请先安装，步骤见 README。';
     }
   }
 
@@ -329,7 +329,7 @@
     const bar = prog.querySelector('.bar i');
     const text = prog.querySelector('span');
     prog.hidden = false;
-    bar.style.width = '0%';
+    bar.style.transform = 'scaleX(0)';
     text.textContent = '上传中 0%';
 
     const xhr = new XMLHttpRequest();
@@ -337,7 +337,7 @@
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) {
         const pct = Math.round((e.loaded / e.total) * 100);
-        bar.style.width = pct + '%';
+        bar.style.transform = 'scaleX(' + (pct / 100) + ')';
         text.textContent = '上传中 ' + pct + '%';
       }
     });
@@ -443,7 +443,7 @@
     const users = state.lastOnlineUsers || [];
     $('chip-online').title = users.length
       ? '在线设备：\n' + users.map((u) => `${u.name}（${u.device || '未知设备'}）`).join('\n')
-      : '';
+      : '当前连接的设备';
   }
 
   function isTeacher() { return !!(App.me && App.me.isTeacher); }
@@ -463,15 +463,15 @@
       return;
     }
     chip.hidden = false;
-    chip.classList.remove('chip-link');
+    chip.className = 'nav-btn';
     const who = '当前教师：' + teacherText();
     if (isTeacher()) {
-      chip.textContent = '👩‍🏫 教师';
-      chip.title = '你就是当前教师，点击打开管理面板';
+      chip.innerHTML = window.icon('shield') + '<span>教师</span>';
+      chip.title = '你是当前教师，点击打开管理面板';
       adminChip.hidden = false;
       chip.onclick = () => { location.href = '/admin.html'; };
     } else if (App.me && App.me.group) {
-      chip.textContent = '👥 ' + App.me.group.name;
+      chip.innerHTML = window.icon('users') + '<span>' + App.me.group.name + '</span>';
       chip.title = '当前分组，点击可换组或退出\n' + who;
       adminChip.hidden = true;
       chip.onclick = () => {
@@ -485,9 +485,9 @@
         ]);
       };
     } else {
-      chip.textContent = '🚪 加入分组';
+      chip.innerHTML = window.icon('log-in') + '<span>加入分组</span>';
       chip.title = '输入老师的加入码，查看本组文档\n' + who;
-      chip.classList.add('chip-link');
+      chip.classList.add('accent');
       adminChip.hidden = true;
       chip.onclick = () => window.joinGroup(() => { App.refreshMe().then(renderHeader); loadAll(); });
     }
@@ -541,7 +541,7 @@
 
   /* ---------- Socket presence ---------- */
   App.socket.on('presence:update', (snap) => {
-    $('chip-online').textContent = '👤 在线 ' + (snap.online.count) + ' 人';
+    $('chip-online').textContent = snap.online.count + ' 台设备在线';
     state.lastOnlineUsers = snap.online.users;
     updateOnlineChipTitle();
     let dirty = false;

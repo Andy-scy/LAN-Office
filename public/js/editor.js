@@ -92,7 +92,8 @@
     const modeBtn = $('ed-mode');
     if (REVIEWABLE.includes(meta.ext) && canEditFile) {
       modeBtn.hidden = false;
-      modeBtn.textContent = reviewMode ? '🖊 修订模式：开' : '🖊 修订模式：关';
+      modeBtn.innerHTML = window.icon('pen', 14) + '<span>修订模式：' + (reviewMode ? '开' : '关') + '</span>';
+      if (reviewMode) modeBtn.classList.add('active');
       modeBtn.title = reviewMode
         ? '当前为修订模式：每人的修改按颜色+名字标注，可切换回自由编辑'
         : '开启修订模式：每人的修改按颜色+名字标注（谁写的哪一段一目了然）';
@@ -168,7 +169,7 @@
                 setStatus('dirty', '● 有未保存的更改（自动保存中…）');
                 scheduleForceSave();
               } else {
-                setStatus('saved', '✓ 已自动保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+                setStatus('saved', '已自动保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }));
               }
             },
             onError: (e) => {

@@ -37,11 +37,16 @@
       <span class="sub">创建 · 填写 · 统计</span>
     </div>
   </div>
-  <div class="chips">
-    <span class="chip" id="chip-online">👤 在线 1 人</span>
-    <a class="chip chip-link" href="/" title="返回文件列表">🗂 文件列表</a>
-    <button class="chip chip-user" id="chip-user" title="点击修改昵称与设备名称">…</button>
+  <div class="top-status">
+    <span class="status-item" id="chip-online">…</span>
   </div>
+  <nav class="top-actions">
+    <a class="nav-btn" href="/" title="返回文件列表">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <span>文件列表</span>
+    </a>
+    <button class="user-btn" id="chip-user" title="到首页可修改昵称与设备名称">…</button>
+  </nav>
 </header>
 
 <main class="wrap" id="main">
@@ -64,8 +69,8 @@
     </div>
     <section class="files scards" id="sv-list" aria-live="polite"></section>
     <section class="empty" id="sv-empty" hidden>
-      <div class="empty-icon">📋</div>
-      <h2>还没有问卷</h2>
+    <svg class="empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="#c3c8d4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
+    <h2>还没有问卷</h2>
       <p>点"新建问卷"，设置几道选择题；学生打开同一网址即可作答，答卷统计一目了然。</p>
     </section>
   </section>
