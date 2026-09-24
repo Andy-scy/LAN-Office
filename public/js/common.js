@@ -11,6 +11,27 @@
     return ADJ[Math.floor(Math.random() * ADJ.length)] + ' ' + ANI[Math.floor(Math.random() * ANI.length)];
   }
 
+  /* 生成 UUID 格式的设备身份：
+     crypto.randomUUID 仅在安全上下文（https/localhost）可用，
+     局域网 IP 走 http 时不存在 —— 这里用 getRandomValues 兜底（全环境可用） */
+  function randomId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      try { return crypto.randomUUID(); } catch (_) { /* 继续兜底 */ }
+    }
+    const b = new Uint8Array(16);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(b);
+    } else {
+      for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+    }
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+
+  const UUID_RE = /^[0-9a-f-]{8,64}$/i;
+
   function guessDeviceKind() {
     const ua = navigator.userAgent || '';
     if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return '平板';
@@ -37,8 +58,9 @@
     let fresh = false;
     try { u = JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch (_) { /* 忽略 */ }
     if (!u || typeof u !== 'object') { u = {}; fresh = true; }
-    if (typeof u.id !== 'string' || !u.id) {
-      u.id = (crypto.randomUUID && crypto.randomUUID()) || 'u' + Date.now() + Math.random().toString(16).slice(2);
+    if (typeof u.id !== 'string' || !UUID_RE.test(u.id)) {
+      // 迁移：修复在非安全上下文（http://局域网IP）下生成的非法 ID
+      u.id = randomId();
       fresh = true;
     }
     if (typeof u.name !== 'string' || !u.name) {
