@@ -458,3 +458,10 @@ body.editor-page { display: flex; flex-direction: column; height: 100%; overflow
 .list { border: 1px solid var(--line); border-radius: 10px; background: #fff; margin-top: 10px; overflow: hidden; }
 .list-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 14px; flex-wrap: wrap; }
 .list-item:last-child { border-bottom: 0; }
+.sheet-divider {
+  text-align: center; color: #9aa1ad; font-size: 12px;
+  margin: 10px 0 6px; display: flex; align-items: center; gap: 10px;
+}
+.sheet-divider::before, .sheet-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--line);
+}

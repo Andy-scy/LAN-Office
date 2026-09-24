@@ -449,6 +449,11 @@
   function isTeacher() { return !!(App.me && App.me.isTeacher); }
   function accessOn() { return !!(state.info && state.info.accessEnabled); }
 
+  function teacherText() {
+    const t = App.me && App.me.teacher;
+    return t && (t.name || t.dname) ? (t.name || '未命名') + (t.dname ? '（' + t.dname + '）' : '') : '暂无';
+  }
+
   function renderRoleChip() {
     const chip = $('chip-role');
     const adminChip = $('chip-admin');
@@ -459,18 +464,20 @@
     }
     chip.hidden = false;
     chip.classList.remove('chip-link');
+    const who = '当前教师：' + teacherText();
     if (isTeacher()) {
       chip.textContent = '👩‍🏫 教师';
-      chip.title = '已以教师身份登录，点击打开管理面板';
+      chip.title = '你就是当前教师，点击打开管理面板';
       adminChip.hidden = false;
       chip.onclick = () => { location.href = '/admin.html'; };
     } else if (App.me && App.me.group) {
       chip.textContent = '👥 ' + App.me.group.name;
-      chip.title = '当前分组，点击可换组或退出';
+      chip.title = '当前分组，点击可换组或退出\n' + who;
       adminChip.hidden = true;
       chip.onclick = () => {
         window.bottomSheet('当前分组：' + App.me.group.name, [
           { label: '换一个分组（输入新加入码）', onClick: () => window.joinGroup(() => { App.refreshMe().then(renderHeader); loadAll(); }) },
+          { label: '教师登录（用管理密码）', onClick: () => window.teacherLogin(() => { App.refreshMe().then(renderHeader); loadAll(); }) },
           { label: '退出分组（仅看公共文档）', danger: true, onClick: async () => {
               await App.api('/api/auth/leave', { method: 'POST', body: JSON.stringify({ userId: App.user.id }) });
               await App.refreshMe(); renderHeader(); loadAll();
@@ -479,7 +486,7 @@
       };
     } else {
       chip.textContent = '🚪 加入分组';
-      chip.title = '输入老师的加入码，查看本组文档';
+      chip.title = '输入老师的加入码，查看本组文档\n' + who;
       chip.classList.add('chip-link');
       adminChip.hidden = true;
       chip.onclick = () => window.joinGroup(() => { App.refreshMe().then(renderHeader); loadAll(); });

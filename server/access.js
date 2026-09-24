@@ -86,8 +86,8 @@ function setSettings(patch, userId) {
   return settings();
 }
 
-/** 教师解锁：密码正确则把该设备标记为教师 */
-function authTeacher(userId, password) {
+/** 教师解锁（单一教师模式）：密码正确则本设备成为教师，原教师设备自动退出 */
+function authTeacher(userId, password, displayName, displayDevice) {
   const id = cleanDeviceId(userId);
   if (!id) {
     const e = new Error('非法设备身份');
@@ -99,12 +99,36 @@ function authTeacher(userId, password) {
     e.status = 401;
     throw e;
   }
-  cache.devices[id] = Object.assign({ role: 'teacher', groupId: null, name: '' }, cache.devices[id], { role: 'teacher' });
+  // 单一教师：撤销其他设备的教师身份（自动退出）
+  for (const key of Object.keys(cache.devices)) {
+    if (key !== id && cache.devices[key].role === 'teacher') {
+      cache.devices[key].role = null;
+    }
+  }
+  cache.devices[id] = Object.assign(
+    { role: null, groupId: null, name: '', dname: '' },
+    cache.devices[id],
+    {
+      role: 'teacher',
+      name: String(displayName || '').slice(0, 24) || (cache.devices[id] && cache.devices[id].name) || '',
+      dname: String(displayDevice || '').slice(0, 24) || (cache.devices[id] && cache.devices[id].dname) || ''
+    }
+  );
   save();
   return getDevice(id);
 }
 
-function joinGroup(userId, code) {
+/** 当前教师是谁（任何设备都可以查询，便于确认身份） */
+function getTeacher() {
+  for (const [key, d] of Object.entries(cache.devices)) {
+    if (d.role === 'teacher') {
+      return { userId: key, name: d.name || '', dname: d.dname || '' };
+    }
+  }
+  return null;
+}
+
+function joinGroup(userId, code, displayName, displayDevice) {
   const id = cleanDeviceId(userId);
   if (!id) {
     const e = new Error('非法设备身份');
@@ -117,9 +141,11 @@ function joinGroup(userId, code) {
     e.status = 404;
     throw e;
   }
-  cache.devices[id] = Object.assign({ role: 'student', groupId: null, name: '' }, cache.devices[id], {
+  cache.devices[id] = Object.assign({ role: 'student', groupId: null, name: '', dname: '' }, cache.devices[id], {
     role: 'student',
-    groupId: group.id
+    groupId: group.id,
+    name: String(displayName || '').slice(0, 24) || (cache.devices[id] && cache.devices[id].name) || '',
+    dname: String(displayDevice || '').slice(0, 24) || (cache.devices[id] && cache.devices[id].dname) || ''
   });
   save();
   return { device: getDevice(id), group: { id: group.id, name: group.name } };
@@ -266,7 +292,7 @@ function clearGroupFiles(groupId, clearFn) {
 module.exports = {
   init, save,
   enabled, settings, setSettings,
-  getDevice, authTeacher, joinGroup, leaveGroup,
+  getDevice, authTeacher, getTeacher, joinGroup, leaveGroup,
   isTeacher, requireTeacher,
   listGroups, listGroupNames, createGroup, removeGroup, groupName,
   fileAccess, filterList, setFileGroup,

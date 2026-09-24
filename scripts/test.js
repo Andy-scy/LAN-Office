@@ -347,6 +347,15 @@ async function main() {
     ok('教师解散分组', ar.status === 200);
     await jsonFetch(`${BASE}/api/groups/${g2.id}?userId=${tId}`, 'DELETE');
 
+    console.log('— 单一教师身份（新教师登录 → 旧教师自动退出）—');
+    const t2 = crypto.randomUUID();
+    ar = await jsonFetch(BASE + '/api/auth/teacher', 'POST', { userId: t2, password: '1234', userName: '李老师', device: '电脑-T2' });
+    ok('新设备凭密码成为教师', ar.status === 200);
+    ar = await (await fetch(BASE + '/api/me', { headers: { 'x-lan-user': tId } })).json();
+    ok('原教师设备自动退出教师身份', ar.isTeacher === false, JSON.stringify({ isTeacher: ar.isTeacher }));
+    ar = await (await fetch(BASE + '/api/me', { headers: { 'x-lan-user': sA } })).json();
+    ok('任何设备都能确认当前教师是谁', ar.teacher && ar.teacher.name === '李老师' && ar.teacher.dname === '电脑-T2', JSON.stringify(ar.teacher));
+
     console.log('— 端口占用自增 + 手动放文件自动识别 —');
     const child2 = spawnServer(PORT, 'data-test-2');
     const base2 = `http://127.0.0.1:${PORT + 1}`;

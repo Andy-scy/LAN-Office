@@ -230,7 +230,7 @@
   window.bottomSheet = bottomSheet;
 
   /* ---------- 身份：教师登录 / 加入分组 ---------- */
-  const me = { isTeacher: false, group: null, device: { role: null }, settings: { accessEnabled: false } };
+  const me = { isTeacher: false, group: null, device: { role: null }, teacher: null, settings: { accessEnabled: false } };
 
   async function refreshMe() {
     try {
@@ -238,50 +238,20 @@
       me.isTeacher = r.isTeacher;
       me.group = r.group;
       me.device = r.device;
+      me.teacher = r.teacher;
       me.settings = r.settings;
       window.dispatchEvent(new CustomEvent('me:updated', { detail: me }));
     } catch (_) { /* 服务未起时静默 */ }
     return me;
   }
 
-  function teacherLogin(onOk) {
-    modal((box, close) => {
-      const h = document.createElement('h3');
-      h.textContent = '👩‍🏫 教师登录';
-      const input = document.createElement('input');
-      input.type = 'password';
-      input.placeholder = '教师管理密码';
-      const tip = document.createElement('div');
-      tip.className = 'tip';
-      tip.textContent = '密码在服务器启动窗口显示，默认 1234，可在 config/config.json 修改。';
-      const row = document.createElement('div');
-      row.className = 'row';
-      const cancel = document.createElement('button');
-      cancel.className = 'btn ghost';
-      cancel.textContent = '取消';
-      cancel.onclick = close;
-      const ok = document.createElement('button');
-      ok.className = 'btn primary';
-      ok.textContent = '登录';
-      ok.onclick = async () => {
-        try {
-          await api('/api/auth/teacher', { method: 'POST', body: JSON.stringify({ password: input.value, userId: user.id }) });
-          close();
-          window.toast('已以教师身份登录', 'ok');
-          await refreshMe();
-          if (onOk) onOk();
-        } catch (e) {
-          tip.textContent = e.message;
-          tip.style.color = '#dc2626';
-        }
-      };
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
-      row.append(cancel, ok);
-      box.append(h, input, tip, row);
-      setTimeout(() => input.focus(), 30);
-    });
+  function teacherText() {
+    return me.teacher && (me.teacher.name || me.teacher.dname)
+      ? (me.teacher.name || '未命名') + (me.teacher.dname ? '（' + me.teacher.dname + '）' : '')
+      : '暂无（可用教师密码登录）';
   }
 
+  /** 加入分组弹窗：学生输加入码；老师也可在这里直接用密码登录（原教师自动退出） */
   function joinGroup(onOk) {
     modal((box, close) => {
       const h = document.createElement('h3');
@@ -293,7 +263,7 @@
       input.placeholder = '输入老师提供的 4 位加入码';
       const tip = document.createElement('div');
       tip.className = 'tip';
-      tip.textContent = '加入后只能看到本组的文档和公共文档。';
+      tip.textContent = '加入后只能看到本组的文档和公共文档。当前教师：' + teacherText();
       const row = document.createElement('div');
       row.className = 'row';
       const cancel = document.createElement('button');
@@ -305,11 +275,87 @@
       ok.textContent = '加入';
       ok.onclick = async () => {
         try {
-          const r = await api('/api/auth/group', { method: 'POST', body: JSON.stringify({ code: input.value, userId: user.id }) });
+          const r = await api('/api/auth/group', {
+            method: 'POST',
+            body: JSON.stringify({ code: input.value, userId: user.id, userName: user.name, device: device.name })
+          });
           close();
           window.toast('已加入分组：' + r.group.name, 'ok');
           await refreshMe();
-          if (onOk) onOk(r);
+          if (onOk) onOk({ type: 'group' });
+        } catch (e) {
+          tip.textContent = e.message;
+          tip.style.color = '#dc2626';
+        }
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok.click(); });
+
+      const div = document.createElement('div');
+      div.className = 'sheet-divider';
+      div.textContent = '我是老师';
+      const input2 = document.createElement('input');
+      input2.type = 'password';
+      input2.placeholder = '教师管理密码（登录后本机成为教师）';
+      const tip2 = document.createElement('div');
+      tip2.className = 'tip';
+      tip2.textContent = '登录后本机成为教师身份，之前登录的教师电脑会自动退出。';
+      const ok2 = document.createElement('button');
+      ok2.className = 'btn';
+      ok2.style.width = '100%';
+      ok2.textContent = '👩‍🏫 教师登录';
+      ok2.onclick = async () => {
+        try {
+          await api('/api/auth/teacher', {
+            method: 'POST',
+            body: JSON.stringify({ password: input2.value, userId: user.id, userName: user.name, device: device.name })
+          });
+          close();
+          window.toast('已以教师身份登录（原教师电脑已自动退出）', 'ok');
+          await refreshMe();
+          if (onOk) onOk({ type: 'teacher' });
+        } catch (e) {
+          tip2.textContent = e.message;
+          tip2.style.color = '#dc2626';
+        }
+      };
+      input2.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok2.click(); });
+
+      row.append(cancel, ok);
+      box.append(h, input, tip, row, div, input2, tip2, ok2);
+      setTimeout(() => input.focus(), 30);
+    });
+  }
+
+  /** 教师登录弹窗（独立入口） */
+  function teacherLogin(onOk) {
+    modal((box, close) => {
+      const h = document.createElement('h3');
+      h.textContent = '👩‍🏫 教师登录';
+      const input = document.createElement('input');
+      input.type = 'password';
+      input.placeholder = '教师管理密码';
+      const tip = document.createElement('div');
+      tip.className = 'tip';
+      tip.textContent = '登录后本机成为教师身份，之前登录的教师电脑会自动退出。当前教师：' + teacherText();
+      const row = document.createElement('div');
+      row.className = 'row';
+      const cancel = document.createElement('button');
+      cancel.className = 'btn ghost';
+      cancel.textContent = '取消';
+      cancel.onclick = close;
+      const ok = document.createElement('button');
+      ok.className = 'btn primary';
+      ok.textContent = '登录';
+      ok.onclick = async () => {
+        try {
+          await api('/api/auth/teacher', {
+            method: 'POST',
+            body: JSON.stringify({ password: input.value, userId: user.id, userName: user.name, device: device.name })
+          });
+          close();
+          window.toast('已以教师身份登录（原教师电脑已自动退出）', 'ok');
+          await refreshMe();
+          if (onOk) onOk();
         } catch (e) {
           tip.textContent = e.message;
           tip.style.color = '#dc2626';

@@ -1,6 +1,6 @@
 {
   "name": "lan-office",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "LAN Office - 局域网多人协同 Office 文档编辑器（Windows 双击即用）",
   "main": "server/index.js",
   "scripts": {

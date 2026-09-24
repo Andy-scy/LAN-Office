@@ -18,7 +18,7 @@ const access = require('./access');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const ID_RE = /^[0-9a-f-]{8,64}$/i;
 
 /** 从请求中解析设备身份（请求头优先，兼容 query/body） */
@@ -145,13 +145,15 @@ function registerRoutes(app) {
       device: d,
       isTeacher: d.role === 'teacher',
       group: groupId ? { id: groupId, name: access.groupName(groupId) } : null,
+      teacher: access.getTeacher(), // 当前教师是谁（所有设备都可确认）
       settings: access.settings()
     });
   });
 
   app.post('/api/auth/teacher', (req, res) => {
     try {
-      const d = access.authTeacher(userIdFrom(req), (req.body || {}).password);
+      const b = req.body || {};
+      const d = access.authTeacher(userIdFrom(req), b.password, b.userName, b.device);
       res.json({ device: d, isTeacher: d.role === 'teacher' });
     } catch (e) {
       res.status(e.status || 400).json({ error: e.message });
@@ -160,7 +162,8 @@ function registerRoutes(app) {
 
   app.post('/api/auth/group', (req, res) => {
     try {
-      const r = access.joinGroup(userIdFrom(req), (req.body || {}).code);
+      const b = req.body || {};
+      const r = access.joinGroup(userIdFrom(req), b.code, b.userName, b.device);
       res.json(r);
     } catch (e) {
       res.status(e.status || 400).json({ error: e.message });
