@@ -18,7 +18,7 @@ const access = require('./access');
 const ds = require('./onlyoffice');
 const { lanAddresses } = require('./network');
 
-const VERSION = '1.5.1';
+const VERSION = '1.6.0';
 const ID_RE = /^[0-9a-f-]{8,64}$/i;
 
 /** 从请求中解析设备身份（请求头优先，兼容 query/body） */
@@ -83,6 +83,12 @@ function editorUserFromBody(body) {
 }
 
 function registerRoutes(app) {
+  /* API 响应一律禁缓存：身份/列表/编辑器配置必须实时（浏览器启发式缓存曾让学生设备停留在旧脚本与旧身份） */
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+
   /* ---------- 上传 ---------- */
   const upload = multer({
     storage: multer.diskStorage({
@@ -244,11 +250,39 @@ function registerRoutes(app) {
         groupId: m.groupId || null,
         groupName: gName,
         readonly: !a.edit,
+        editorsSpecified: Array.isArray(m.editors) && m.editors.length > 0,
+        editorsCount: Array.isArray(m.editors) ? m.editors.length : 0,
         editing: { count: collab.editingCount(m.id), users: collab.editingUsers(m.id) }
       })),
       ds: { available: st.available, url: ds.publicDsUrl() },
       settings: access.settings()
     });
+  });
+
+  /** 已注册的学生设备列表（教师指定文档编辑者用） */
+  app.get('/api/students', (req, res) => {
+    try {
+      access.requireTeacher(userIdFrom(req));
+      res.json({ students: access.listStudents() });
+    } catch (e) {
+      res.status(e.status || 400).json({ error: e.message });
+    }
+  });
+
+  /** 指定文档的可编辑学生名单（教师）：空数组 = 按分组规则 */
+  app.post('/api/files/:id/editors', (req, res) => {
+    const id = requireValidId(req, res); if (!id) return;
+    try {
+      access.requireTeacher(userIdFrom(req));
+    } catch (e) {
+      return res.status(e.status || 403).json({ error: e.message });
+    }
+    const meta = fileManager.get(id);
+    if (!meta) return res.status(404).json({ error: '文件不存在' });
+    const editors = (req.body || {}).editors;
+    if (!Array.isArray(editors)) return res.status(400).json({ error: 'editors 必须是数组' });
+    const updated = fileManager.setFileEditors(id, editors);
+    res.json({ file: updated, editorsCount: updated.editors.length });
   });
 
   app.get('/api/files/:id/meta', (req, res) => {
@@ -257,12 +291,14 @@ function registerRoutes(app) {
     if (!meta) return res.status(404).json({ error: '文件不存在' });
     const a = access.fileAccess(userIdFrom(req), meta);
     if (!a.view) return res.status(404).json({ error: '文件不存在' }); // 无权查看时不暴露其存在
+    const isTeacherViewer = access.isTeacher(userIdFrom(req));
     res.json({
       file: {
         id: meta.id, name: meta.name, ext: meta.ext, size: meta.size,
         mtime: meta.mtime, createdAt: meta.createdAt, version: meta.version,
         groupId: meta.groupId || null,
-        groupName: meta.groupId ? access.groupName(meta.groupId) : null
+        groupName: meta.groupId ? access.groupName(meta.groupId) : null,
+        editors: isTeacherViewer ? (meta.editors || []) : undefined
       },
       canEdit: a.edit,
       editing: { count: collab.editingCount(meta.id), users: collab.editingUsers(meta.id) }

@@ -18,7 +18,7 @@ const { lanAddresses } = require('./network');
 const { registerRoutes, setPort } = require('./routes');
 const { attach: attachWebsocket } = require('./websocket');
 
-const VERSION = '1.5.1';
+const VERSION = '1.6.0';
 
 function isPortFree(port) {
   return new Promise((resolve) => {
@@ -109,7 +109,11 @@ async function main() {
   });
   app.use(express.json({ limit: '4mb' }));
   registerRoutes(app);
-  app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.use(express.static(path.join(__dirname, '..', 'public'), {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') // 静态资源必须回源验证，防止学生设备停留在旧脚本
+  }));
 
   const server = http.createServer(app);
   attachWebsocket(server);

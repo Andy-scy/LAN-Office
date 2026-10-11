@@ -161,9 +161,11 @@
         const item = document.createElement('div');
         item.className = 'list-item';
         const name = document.createElement('span');
-        name.textContent = f.name + (f.groupName ? `（${f.groupName}）` : (f.groupId ? '（已解散分组）' : '（公共）'));
+        name.textContent = f.name + (f.groupName ? `（${f.groupName}）` : (f.groupId ? '（已解散分组）' : '（公共）')) +
+          (f.editorsSpecified ? `（指定 ${f.editorsCount} 人可编辑）` : '');
         const sel = document.createElement('select');
         sel.className = 'adm-select';
+        sel.title = '分组可见范围';
         sel.append(new Option('公共（人人可编辑）', ''));
         for (const g of groups) sel.append(new Option(g.name + '（加入码 ' + g.code + '）', g.id));
         sel.value = f.groupId || '';
@@ -179,12 +181,88 @@
             window.toast(e.message, 'error');
           }
         });
-        item.append(name, sel);
+        const editorsBtn = document.createElement('button');
+        editorsBtn.className = 'btn mini';
+        editorsBtn.title = '指定哪些学生可以编辑这份文档';
+        editorsBtn.textContent = '编辑者…';
+        editorsBtn.onclick = () => editEditors(f);
+        item.append(name, editorsBtn, sel);
         el.appendChild(item);
       }
     } catch (e) {
       window.toast(e.message, 'error');
     }
+  }
+
+  /* ---------- 指定文档的可编辑学生 ---------- */
+  async function editEditors(f) {
+    let students = [];
+    let editors = [];
+    try {
+      const [sr, mr] = await Promise.all([
+        App.api('/api/students'),
+        App.api(`/api/files/${encodeURIComponent(f.id)}/meta`)
+      ]);
+      students = sr.students;
+      editors = mr.file.editors || [];
+    } catch (e) {
+      return window.toast(e.message, 'error');
+    }
+    window.modal((box, close) => {
+      const h = document.createElement('h3');
+      h.textContent = '可编辑学生 · ' + f.name;
+      const tip = document.createElement('div');
+      tip.className = 'tip';
+      tip.textContent = '勾选的学生可以编辑这份文档；一个都不勾 = 按分组规则（本组成员可编辑）。';
+      box.append(h, tip);
+      if (!students.length) {
+        const none = document.createElement('div');
+        none.className = 'tip';
+        none.textContent = '还没有学生设备加入过分组——学生先用加入码进组，再回来指定编辑者。';
+        box.appendChild(none);
+      } else {
+        const list = document.createElement('div');
+        list.className = 'list';
+        const boxes = [];
+        for (const st of students) {
+          const label = document.createElement('label');
+          label.className = 'opt-label';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = st.id;
+          cb.checked = editors.indexOf(st.id) >= 0;
+          label.append(cb, document.createTextNode(` ${st.name}${st.dname ? '（' + st.dname + '）' : ''}${st.group ? ' · ' + st.group : ''}`));
+          list.appendChild(label);
+          boxes.push({ id: st.id, cb });
+        }
+        box.appendChild(list);
+        const row = document.createElement('div');
+        row.className = 'row';
+        const cancel = document.createElement('button');
+        cancel.className = 'btn ghost';
+        cancel.textContent = '取消';
+        cancel.onclick = close;
+        const ok = document.createElement('button');
+        ok.className = 'btn primary';
+        ok.textContent = '保存';
+        ok.onclick = async () => {
+          const picked = boxes.filter((b) => b.cb.checked).map((b) => b.id);
+          try {
+            await App.api(`/api/files/${encodeURIComponent(f.id)}/editors`, {
+              method: 'POST',
+              body: JSON.stringify({ editors: picked })
+            });
+            close();
+            window.toast(picked.length ? `已指定 ${picked.length} 名学生可编辑` : '已恢复按分组规则', 'ok');
+            loadFiles();
+          } catch (e) {
+            window.toast(e.message, 'error');
+          }
+        };
+        row.append(cancel, ok);
+        box.appendChild(row);
+      }
+    });
   }
 
   init();

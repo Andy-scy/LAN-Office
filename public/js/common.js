@@ -306,11 +306,19 @@
       : '暂无（可用教师密码登录）';
   }
 
-  /** 加入分组弹窗：学生输加入码；老师也可在这里直接用密码登录（原教师自动退出） */
+  /** 加入分组弹窗：填写名字 + 加入码；老师也可在这里直接用密码登录（原教师自动退出） */
   function joinGroup(onOk) {
     modal((box, close) => {
       const h = document.createElement('h3');
       h.textContent = '加入分组';
+      const nameLabel = document.createElement('div');
+      nameLabel.className = 'tip';
+      nameLabel.textContent = '你的名字（会显示给同组同学和老师）';
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.maxLength = 24;
+      nameInput.value = user.name;
+      nameInput.placeholder = '例如：张三';
       const input = document.createElement('input');
       input.type = 'text';
       input.inputMode = 'numeric';
@@ -329,16 +337,44 @@
       ok.className = 'btn primary';
       ok.textContent = '加入';
       ok.onclick = async () => {
+        const name = nameInput.value.trim();
+        if (!name) { tip.textContent = '请先填写你的名字'; tip.style.color = '#dc2626'; return; }
         try {
           const r = await api('/api/auth/group', {
             method: 'POST',
-            body: JSON.stringify({ code: input.value, userId: user.id, userName: user.name, device: device.name })
+            body: JSON.stringify({ code: input.value, userId: user.id, userName: name, device: device.name })
           });
+          user.name = name;
+          saveUser();
+          try { App.socket.emit('user:profile', { name: user.name, device: device.name }); } catch (_) { /* 忽略 */ }
           close();
           window.toast('已加入分组：' + r.group.name, 'ok');
           await refreshMe();
           if (onOk) onOk({ type: 'group' });
         } catch (e) {
+          if (/非法设备身份/.test(e.message)) {
+            // 旧版本生成的非法设备 ID：自动重建后重试一次
+            user.id = randomId();
+            saveUser();
+            try { App.socket.disconnect(); App.socket.connect(); } catch (_) { /* 忽略 */ }
+            try {
+              const r = await api('/api/auth/group', {
+                method: 'POST',
+                body: JSON.stringify({ code: input.value, userId: user.id, userName: name, device: device.name })
+              });
+              user.name = name;
+              saveUser();
+              close();
+              window.toast('已加入分组：' + r.group.name, 'ok');
+              await refreshMe();
+              if (onOk) onOk({ type: 'group' });
+              return;
+            } catch (e2) {
+              tip.textContent = e2.message;
+              tip.style.color = '#dc2626';
+              return;
+            }
+          }
           tip.textContent = e.message;
           tip.style.color = '#dc2626';
         }
@@ -376,8 +412,8 @@
       input2.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok2.click(); });
 
       row.append(cancel, ok);
-      box.append(h, input, tip, row, div, input2, tip2, ok2);
-      setTimeout(() => input.focus(), 30);
+      box.append(h, nameLabel, nameInput, input, tip, row, div, input2, tip2, ok2);
+      setTimeout(() => nameInput.focus(), 30);
     });
   }
 
@@ -425,6 +461,7 @@
 
   App.me = me;
   App.refreshMe = refreshMe;
+  App.randomId = randomId;
   window.teacherLogin = teacherLogin;
   window.joinGroup = joinGroup;
   refreshMe();

@@ -231,29 +231,41 @@ function groupName(groupId) {
 /* ---------- 文件访问判定 ---------- */
 
 /**
- * 返回 { view, edit, reason }：
+ * 文件访问判定：
  *  - accessEnabled=false → 人人可看可编（旧行为）
  *  - 教师 → 全部可看可编
- *  - meta.groupId 为空 → 公共文档
- *  - 学生：本组可编；他组按设置隐藏或只读；未加入组 → 公共文档只读
+ *  - meta.editors 非空（教师指定的学生名单）→ 名单内可编，名单外按可见性隐藏/只读
+ *  - meta.editors 为空 → 按分组规则：公共文档人人可编；本组学生可编；他组按可见性
+ *  - 未加入分组的访客 → 公共文档只读，其余不可见
  */
 function fileAccess(userId, meta) {
   if (!enabled()) return { view: true, edit: true };
   const d = getDevice(userId);
   if (d.role === 'teacher') return { view: true, edit: true };
+  const editors = Array.isArray(meta.editors) ? meta.editors : [];
+  const specified = editors.length > 0;
+  const inList = specified && editors.indexOf(String(userId)) >= 0;
   const publicDoc = !meta.groupId;
+
   if (d.role === 'student') {
+    if (specified) {
+      if (inList) return { view: true, edit: true };
+      if (cache.settings.studentVisibility === 'readonly' && (publicDoc || meta.groupId === d.groupId)) {
+        return { view: true, edit: false };
+      }
+      return { view: false, edit: false };
+    }
     if (publicDoc) return { view: true, edit: true };
     if (meta.groupId === d.groupId) return { view: true, edit: true };
     if (cache.settings.studentVisibility === 'readonly') return { view: true, edit: false };
     return { view: false, edit: false };
   }
-  // 未加入组的访客：公共文档只读，分组文档不可见
-  if (publicDoc) return { view: true, edit: false };
+  // 未加入分组的访客：公共且未指定名单的文档只读，其余不可见
+  if (publicDoc && !specified) return { view: true, edit: false };
   return { view: false, edit: false };
 }
 
-/** 列表过滤：返回 {items:[{meta, access}], settings} */
+/** 列表过滤：返回 {items:[{meta, access, groupName}], settings} */
 function filterList(userId, metas) {
   const items = [];
   for (const meta of metas) {
@@ -266,6 +278,22 @@ function filterList(userId, metas) {
     });
   }
   return items;
+}
+
+/** 已注册的学生设备列表（教师指定编辑者用） */
+function listStudents() {
+  const out = [];
+  for (const [id, d] of Object.entries(cache.devices)) {
+    if (d.role === 'student') {
+      out.push({
+        id,
+        name: d.name || '',
+        dname: d.dname || '',
+        group: d.groupId ? groupName(d.groupId) : null
+      });
+    }
+  }
+  return out.sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
 }
 
 /** 文件归组/解除归组（教师），返回是否发生了变化 */
@@ -295,6 +323,7 @@ module.exports = {
   getDevice, authTeacher, getTeacher, joinGroup, leaveGroup,
   isTeacher, requireTeacher,
   listGroups, listGroupNames, createGroup, removeGroup, groupName,
+  listStudents,
   fileAccess, filterList, setFileGroup,
   cleanDeviceId
 };

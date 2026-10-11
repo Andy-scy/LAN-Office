@@ -331,6 +331,19 @@ function setFileGroupById(id, groupId) {
   return meta;
 }
 
+/** 指定文档的可编辑学生名单（空数组 = 按分组规则）；ID 去重并校验格式 */
+function setFileEditors(id, editors) {
+  const meta = get(id);
+  if (!meta) return null;
+  const re = /^[0-9a-f-]{8,64}$/i;
+  const list = (Array.isArray(editors) ? editors : [])
+    .map((x) => String(x || ''))
+    .filter((x) => re.test(x));
+  meta.editors = Array.from(new Set(list));
+  saveIndex();
+  return meta;
+}
+
 /** 某分组被解散时，把该组全部文件复位为公共（返回复位数量） */
 function clearGroup(groupId) {
   let n = 0;
@@ -363,5 +376,5 @@ module.exports = {
   applySavedFile, bumpVersionIfIdle,
   backupFile, listBackups, restoreBackup,
   documentTypeInfo, sanitizeFileName, extOf, uniqueName, dirs,
-  setFileGroupById, clearGroup
+  setFileGroupById, clearGroup, setFileEditors
 };

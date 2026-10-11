@@ -356,6 +356,45 @@ async function main() {
     ar = await (await fetch(BASE + '/api/me', { headers: { 'x-lan-user': sA } })).json();
     ok('任何设备都能确认当前教师是谁', ar.teacher && ar.teacher.name === '李老师' && ar.teacher.dname === '电脑-T2', JSON.stringify(ar.teacher));
 
+    console.log('— 按文档指定学生编辑者 —');
+    ar = await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { accessEnabled: true, studentVisibility: 'hidden' }, userId: t2 });
+    ok('重新开启访问控制', ar.status === 200);
+    const sE1 = crypto.randomUUID(), sE2 = crypto.randomUUID();
+    ar = await jsonFetch(BASE + '/api/groups', 'POST', { name: '测试组', userId: t2 });
+    const gE = (await ar.json()).group;
+    await jsonFetch(BASE + '/api/auth/group', 'POST', { code: gE.code, userId: sE1, userName: '学生一', device: '平板-E1' });
+    await jsonFetch(BASE + '/api/auth/group', 'POST', { code: gE.code, userId: sE2, userName: '学生二', device: '手机-E2' });
+    ar = await (await fetch(BASE + '/api/students', { headers: { 'x-lan-user': t2 } })).json();
+    const gStudents = ar.students.filter((x) => x.group === '测试组');
+    ok('学生设备列表（教师可见，含分组）', gStudents.length === 2 && gStudents.every((x) => x.name && x.dname), JSON.stringify(ar.students));
+    const forbidden = await fetch(BASE + '/api/students', { headers: { 'x-lan-user': sE1 } });
+    ok('学生拉取学生列表被拒（403）', forbidden.status === 403);
+
+    ar = await jsonFetch(BASE + '/api/files/create', 'POST', { ext: 'docx', name: '指定编辑者.docx', userId: t2 });
+    const fEd = (await ar.json()).file;
+    await jsonFetch(`${BASE}/api/files/${fEd.id}/assign`, 'POST', { groupId: gE.id, userId: t2 });
+    ar = await jsonFetch(`${BASE}/api/files/${fEd.id}/editors`, 'POST', { editors: [sE1], userId: t2 });
+    ok('教师指定名单（1 人）', ar.status === 200 && (await ar.json()).editorsCount === 1);
+    ar = await jsonFetch(`${BASE}/api/files/${fEd.id}/editors`, 'POST', { editors: [sE1], userId: sE2 });
+    ok('学生指定名单被拒（403）', ar.status === 403);
+
+    ar = await fetch(`${BASE}/api/files/${fEd.id}/meta`, { headers: { 'x-lan-user': sE1 } });
+    ok('名单内学生可编辑（覆盖分组规则）', ar.status === 200 && (await ar.json()).canEdit === true);
+    ar = await fetch(`${BASE}/api/files/${fEd.id}/meta`, { headers: { 'x-lan-user': sE2 } });
+    ok('隐藏模式下名单外学生不可见（404）', ar.status === 404);
+    await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { studentVisibility: 'readonly' }, userId: t2 });
+    ar = await fetch(`${BASE}/api/files/${fEd.id}/meta`, { headers: { 'x-lan-user': sE2 } });
+    const metaRO = await ar.json();
+    ok('只读模式下名单外学生 canEdit=false', ar.status === 200 && metaRO.canEdit === false, JSON.stringify(metaRO).slice(0, 120));
+    await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { studentVisibility: 'hidden' }, userId: t2 });
+
+    ar = await jsonFetch(`${BASE}/api/files/${fEd.id}/editors`, 'POST', { editors: [], userId: t2 });
+    ar = await fetch(`${BASE}/api/files/${fEd.id}/meta`, { headers: { 'x-lan-user': sE2 } });
+    ok('清空名单后恢复分组规则（本组可编辑）', (await ar.json()).canEdit === true);
+    await jsonFetch(`${BASE}/api/files/${fEd.id}`, 'DELETE', undefined, t2);
+    await jsonFetch(`${BASE}/api/groups/${gE.id}?userId=${t2}`, 'DELETE');
+    await jsonFetch(BASE + '/api/settings', 'PUT', { settings: { accessEnabled: false }, userId: t2 });
+
     console.log('— 端口占用自增 + 手动放文件自动识别 —');
     const child2 = spawnServer(PORT, 'data-test-2');
     const base2 = `http://127.0.0.1:${PORT + 1}`;
